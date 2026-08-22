@@ -1,7 +1,8 @@
 """
-NexusPay Server — Panel web que controla el agente automatico
+NexusPay Server — Funciona desde PC y Android
 Ejecuta: python server.py
-Abre: http://localhost:5050
+PC: http://localhost:5050
+Celular: http://TU_IP:5050
 """
 
 import os
@@ -9,6 +10,7 @@ import sys
 import json
 import threading
 import time
+import socket
 from pathlib import Path
 
 try:
@@ -25,52 +27,80 @@ except ImportError:
 
 app = Flask(__name__)
 
-# Global state
-state = {
-    'status': 'idle',  # idle, running, waiting_login, waiting_verify, done, error
-    'message': '',
-    'result': None,
-    'screenshot': None,
-}
+# ==================== STATE ====================
+state = {'status': 'idle', 'message': '', 'step': 0, 'total': 7}
 
-HTML_PAGE = '''<!DOCTYPE html>
+# ==================== GET LOCAL IP ====================
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except:
+        return "127.0.0.1"
+
+# ==================== HTML ====================
+HTML = '''<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>NexusPay Agent</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:16px}
+body{font-family:-apple-system,sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;display:flex;justify-content:center;padding:16px}
 .box{max-width:480px;width:100%}
-.hd{background:#111827;border-radius:12px;padding:20px;margin-bottom:16px;text-align:center}
-.hd h1{font-size:22px;color:#4285f4;margin-bottom:4px}
+.hd{background:linear-gradient(135deg,#111827,#1a1a2e);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;border:1px solid #1e293b}
+.hd h1{font-size:24px;color:#4285f4;margin-bottom:4px}
 .hd p{font-size:13px;color:#94a3b8}
+.card{background:linear-gradient(135deg,#1a2744,#1e1b4b);border-radius:16px;padding:24px;margin-bottom:16px;border:1px solid rgba(66,133,244,.2)}
+.chip{width:40px;height:28px;background:linear-gradient(135deg,#d4af37,#f0d060);border-radius:6px;margin-bottom:16px}
+.brand{font-size:16px;font-weight:700;letter-spacing:2px;color:#4285f4;margin-bottom:16px}
+.cnum{font-size:20px;font-weight:600;letter-spacing:3px;font-family:monospace;margin-bottom:16px}
+.cexp{text-align:right;font-size:14px;color:#94a3b8}
 .fg{margin-bottom:12px}
 .fg label{display:block;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:5px}
-.fg input{width:100%;background:#1a2035;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:18px;color:#e2e8f0;outline:none;font-family:monospace}
-.fg input:focus{border-color:#4285f4}
-.btn{display:block;width:100%;padding:16px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;color:#fff}
-.bp{background:linear-gradient(135deg,#4285f4,#6366f1);margin-top:8px}
+.fg input{width:100%;background:#1a2035;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:18px;color:#e2e8f0;outline:none;font-family:monospace;letter-spacing:1px}
+.fg input:focus{border-color:#4285f4;box-shadow:0 0 0 3px rgba(66,133,244,.2)}
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;color:#fff;margin-top:8px}
+.bp{background:linear-gradient(135deg,#4285f4,#6366f1);box-shadow:0 4px 15px rgba(66,133,244,.3)}
 .bp:active{transform:scale(.98)}
 .bp:disabled{opacity:.5;cursor:not-allowed}
-.status{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:16px;margin-top:16px;display:none}
-.status.show{display:block}
-.status h3{font-size:14px;margin-bottom:8px}
-.status p{font-size:12px;color:#94a3b8;line-height:1.6}
-.slog{background:#0a0e1a;border-radius:8px;padding:12px;margin-top:12px;max-height:300px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.8;color:#94a3b8}
-.slog .ok{color:#34d399}
-.slog .err{color:#f87171}
-.slog .inf{color:#4285f4}
-.slog .warn{color:#fbbf24}
-.note{background:rgba(66,133,244,.1);border:1px solid rgba(66,133,244,.2);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:#94a3b8;line-height:1.6}
+.bs{background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3)}
+.bo{background:transparent;color:#94a3b8;border:1px solid #1e293b}
+.mrow{display:flex;gap:8px;margin-top:8px}
+.mrow .btn{flex:1}
+.progress{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:16px;margin-top:16px;display:none}
+.progress.show{display:block}
+.pbar{height:4px;background:#1e293b;border-radius:2px;margin:12px 0;overflow:hidden}
+.pfill{height:100%;background:linear-gradient(90deg,#4285f4,#34d399);border-radius:2px;transition:width .5s}
+.steps{list-style:none;padding:0}
+.steps li{padding:8px 0;font-size:13px;color:#64748b;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:8px}
+.steps li:last-child{border:none}
+.steps li.active{color:#4285f4}
+.steps li.done{color:#34d399}
+.steps li .ico{width:20px;text-align:center}
+.note{background:rgba(66,133,244,.1);border:1px solid rgba(66,133,244,.2);border-radius:8px;padding:12px;margin-top:12px;font-size:11px;color:#94a3b8;line-height:1.6}
+.logbox{background:#0a0e1a;border-radius:8px;padding:12px;margin-top:12px;max-height:200px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.8;color:#94a3b8;display:none}
+.logbox.show{display:block}
+.ok{color:#34d399}.err{color:#f87171}.inf{color:#4285f4}
+.ft{text-align:center;padding:16px;font-size:10px;color:#64748b}
 </style>
 </head>
 <body>
 <div class="box">
   <div class="hd">
     <h1>⚡ NexusPay Agent</h1>
-    <p>Automatiza el proceso de agregar tarjetas a Google Pay</p>
+    <p>Automatiza agregar tarjetas a Google Pay</p>
+  </div>
+
+  <div class="card">
+    <div class="chip"></div>
+    <div class="brand" id="brand">VISA</div>
+    <div class="cnum" id="cnum">•••• •••• •••• ••••</div>
+    <div class="cexp" id="cexp">MM/AA</div>
   </div>
 
   <div class="fg">
@@ -84,69 +114,98 @@ body{font-family:-apple-system,sans-serif;background:#0a0e1a;color:#e2e8f0;min-h
 
   <button class="btn bp" id="btnGo" onclick="startAgent()">⚡ Vincular Automaticamente</button>
 
-  <div class="note">
-    <strong>Como funciona:</strong><br>
-    1. Ingresa numero y vencimiento<br>
-    2. Presiona "Vincular"<br>
-    3. Se abre Chrome automaticamente<br>
-    4. El agente navega a Google Pay<br>
-    5. Llena todos los campos solo<br>
-    6. Confirma y verifica<br>
-    7. ¡Listo! Tu tarjeta queda vinculada
+  <div class="mrow">
+    <button class="btn bo" onclick="goToGPay()">🌐 Google Pay Web</button>
+    <button class="btn bo" onclick="goToWallet()">📱 Google Wallet</button>
   </div>
 
-  <div class="status" id="status">
-    <h3 id="statusTitle">Estado</h3>
-    <p id="statusMsg"></p>
-    <div class="slog" id="log"></div>
+  <div class="progress" id="prog">
+    <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+    <ul class="steps">
+      <li id="s1"><span class="ico">1</span> Abriendo Chrome...</li>
+      <li id="s2"><span class="ico">2</span> Navegando a Google Pay...</li>
+      <li id="s3"><span class="ico">3</span> Iniciando sesion...</li>
+      <li id="s4"><span class="ico">4</span> Agregando tarjeta...</li>
+      <li id="s5"><span class="ico">5</span> Llenando datos...</li>
+      <li id="s6"><span class="ico">6</span> Confirmando...</li>
+      <li id="s7"><span class="ico">7</span> Verificando...</li>
+    </ul>
+  </div>
+
+  <div class="logbox" id="logbox"></div>
+
+  <div class="note">
+    <strong>⚡ Como funciona:</strong><br>
+    1. Ingresa tu tarjeta<br>
+    2. Presiona "Vincular"<br>
+    3. Se abre Chrome en la PC<br>
+    4. El agente hace TODO solo<br>
+    5. Solo necesitas confirmar si te pide SMS<br>
+    6. ¡Listo!
   </div>
 </div>
 
 <script>
-var logs = [];
-function addLog(msg, cls) {
-    logs.push('<div class="'+(cls||'')+'">'+msg+'</div>');
-    document.getElementById('log').innerHTML = logs.join('');
-    document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+// Auto format
+document.getElementById('num').addEventListener('input',function(){
+  var r=this.value.replace(/\\s/g,'').replace(/\\D/g,'').substring(0,16);
+  var f='';for(var i=0;i<r.length;i++){if(i>0&&i%4==0)f+=' ';f+=r[i];}
+  this.value=f;
+  document.getElementById('cnum').textContent=f||'\\u2022\\u2022\\u2022\\u2022 \\u2022\\u2022\\u2022\\u2022 \\u2022\\u2022\\u2022\\u2022 \\u2022\\u2022\\u2022\\u2022';
+  var b='VISA';if(/^4/.test(r))b='VISA';else if(/^5[1-5]/.test(r))b='MASTERCARD';else if(/^3[47]/.test(r))b='AMEX';else if(/^6(?:011|5)/.test(r))b='DISCOVER';
+  document.getElementById('brand').textContent=b;
+});
+document.getElementById('exp').addEventListener('input',function(){
+  var r=this.value.replace(/\\//g,'').replace(/\\D/g,'').substring(0,4);
+  this.value=r.length>2?r.substring(0,2)+'/'+r.substring(2):r;
+  document.getElementById('cexp').textContent=this.value||'MM/AA';
+});
+
+function log(msg,cls){
+  var lb=document.getElementById('logbox');
+  lb.classList.add('show');
+  lb.innerHTML+='<div class="'+(cls||'')+'">'+msg+'</div>';
+  lb.scrollTop=lb.scrollHeight;
 }
-function showStatus(title, msg) {
-    document.getElementById('status').classList.add('show');
-    document.getElementById('statusTitle').textContent = title;
-    document.getElementById('statusMsg').textContent = msg;
+
+function setStep(n,msg){
+  for(var i=1;i<=7;i++){
+    var li=document.getElementById('s'+i);
+    li.className=i<n?'done':i==n?'active':'';
+    if(i==n&&msg)li.innerHTML='<span class="ico">'+(i<n?'✓':i==n?'🔄':'')+'</span> '+msg;
+  }
+  document.getElementById('pfill').style.width=Math.round(n/7*100)+'%';
 }
-function startAgent() {
-    var num = document.getElementById('num').value.replace(/\\s/g,'');
-    var exp = document.getElementById('exp').value;
-    if (!num || num.length < 13) { alert('Numero invalido'); return; }
-    if (!exp || exp.length < 5) { alert('Vencimiento requerido'); return; }
-    document.getElementById('btnGo').disabled = true;
-    document.getElementById('btnGo').textContent = '🔄 Ejecutando...';
-    logs = [];
-    showStatus('Ejecutando agente...', 'El navegador se abrira en unos segundos');
-    addLog('Iniciando agente...', 'inf');
-    fetch('/start', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({num: num, exp: exp})
-    }).then(function(r){return r.json()}).then(function(d){
-        addLog(d.message, d.ok ? 'ok' : 'err');
-        document.getElementById('btnGo').disabled = false;
-        document.getElementById('btnGo').textContent = '⚡ Vincular Automaticamente';
-        showStatus(d.ok ? '✅ Completado' : '⚠️ Error', d.message);
-    }).catch(function(e){
-        addLog('Error: '+e, 'err');
-        document.getElementById('btnGo').disabled = false;
-        document.getElementById('btnGo').textContent = '⚡ Vincular Automaticamente';
-    });
+
+function startAgent(){
+  var num=document.getElementById('num').value.replace(/\\s/g,'');
+  var exp=document.getElementById('exp').value;
+  if(!num||num.length<13){alert('Numero invalido');return;}
+  if(!exp||exp.length<5){alert('Vencimiento requerido');return;}
+  document.getElementById('btnGo').disabled=true;
+  document.getElementById('btnGo').textContent='🔄 Ejecutando agente...';
+  document.getElementById('prog').classList.add('show');
+  log('Iniciando agente...','inf');
+  setStep(1,'Abriendo Chrome...');
+  fetch('/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({num:num,exp:exp})})
+  .then(function(r){return r.json()}).then(function(d){
+    log(d.message,d.ok?'ok':'err');
+    document.getElementById('btnGo').disabled=false;
+    document.getElementById('btnGo').textContent='⚡ Vincular Automaticamente';
+  }).catch(function(e){log('Error: '+e,'err');document.getElementById('btnGo').disabled=false;document.getElementById('btnGo').textContent='⚡ Vincular Automaticamente';});
 }
-// Auto-refresh status
+
+// Poll status
 setInterval(function(){
-    fetch('/status').then(function(r){return r.json()}).then(function(d){
-        if (d.status !== 'idle' && d.message) {
-            addLog(d.message, d.status === 'done' ? 'ok' : d.status === 'error' ? 'err' : 'inf');
-        }
-    });
-}, 2000);
+  fetch('/status').then(function(r){return r.json()}).then(function(d){
+    if(d.step>0)setStep(d.step,d.message);
+    if(d.status=='done'){log('✅ '+d.message,'ok');document.getElementById('btnGo').disabled=false;document.getElementById('btnGo').textContent='⚡ Vincular Automaticamente';}
+    if(d.status=='error'){log('❌ '+d.message,'err');document.getElementById('btnGo').disabled=false;document.getElementById('btnGo').textContent='⚡ Vincular Automaticamente';}
+  });
+},1500);
+
+function goToGPay(){window.open('https://pay.google.com','_blank');}
+function goToWallet(){window.open('https://wallet.google.com','_blank');}
 </script>
 </body>
 </html>'''
@@ -154,7 +213,7 @@ setInterval(function(){
 
 @app.route('/')
 def index():
-    return render_template_string(HTML_PAGE)
+    return render_template_string(HTML)
 
 
 @app.route('/status')
@@ -165,68 +224,68 @@ def status():
 @app.route('/start', methods=['POST'])
 def start():
     data = request.json
-    num = data.get('num', '').replace(' ', '')
+    num = data.get('num', '').replace(' ', '').replace('-', '')
     exp = data.get('exp', '')
 
     if len(num) < 13 or len(exp) < 5:
         return jsonify({'ok': False, 'message': 'Datos invalidos'})
 
-    # Run agent in background thread
     state['status'] = 'running'
-    state['message'] = 'Iniciando agente...'
+    state['message'] = 'Iniciando...'
+    state['step'] = 1
 
     t = threading.Thread(target=run_agent, args=(num, exp), daemon=True)
     t.start()
 
-    return jsonify({'ok': True, 'message': 'Agente iniciado — revisa el navegador'})
+    return jsonify({'ok': True, 'message': 'Agente iniciado — Chrome se abrira'})
 
 
 def run_agent(num, exp):
-    """Run the Playwright agent in a background thread"""
     global state
-
     parts = exp.replace('/', '').strip()
-    month = parts[:2]
-    year = parts[2:]
+    month, year = parts[:2], parts[2:]
 
     try:
         state['message'] = 'Abriendo Chrome...'
+        state['step'] = 1
+
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=False,
-                args=['--disable-blink-features=AutomationControlled']
+                args=['--disable-blink-features=AutomationControlled', '--no-first-run']
             )
-
             context = browser.new_context(
                 viewport={'width': 412, 'height': 915},
-                user_agent='Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                user_agent='Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36',
                 locale='en-US',
             )
-
             page = context.new_page()
 
             # Step 1: Go to Google Pay
             state['message'] = 'Navegando a Google Pay...'
+            state['step'] = 2
             page.goto('https://pay.google.com', wait_until='networkidle', timeout=30000)
             time.sleep(3)
 
-            # Check if login needed
+            # Step 2: Check login
             if 'signin' in page.url or 'accounts.google.com' in page.url:
-                state['status'] = 'waiting_login'
-                state['message'] = 'Esperando que inicies sesion en Google...'
+                state['message'] = 'Inicia sesion en Google...'
+                state['step'] = 3
                 for i in range(180):
                     time.sleep(1)
                     if 'wallet' in page.url or 'pay.google' in page.url:
-                        state['message'] = 'Sesion iniciada!'
+                        state['message'] = 'Sesion OK'
                         break
+                    if i % 15 == 0 and i > 0:
+                        state['message'] = f'Esperando sesion ({i}s)...'
                 time.sleep(3)
 
-            # Step 2: Go to payment methods
+            # Step 3: Go to wallet
             state['message'] = 'Abriendo metodos de pago...'
+            state['step'] = 4
             page.goto('https://wallet.google.com/manage/methods', wait_until='networkidle', timeout=30000)
             time.sleep(3)
 
-            # Re-check login
             if 'signin' in page.url:
                 state['message'] = 'Esperando sesion...'
                 for i in range(120):
@@ -235,80 +294,58 @@ def run_agent(num, exp):
                         break
                 time.sleep(3)
 
-            # Step 3: Find and click "Add payment method"
-            state['message'] = 'Buscando boton de agregar...'
-            selectors = [
-                'text="Add a payment method"',
-                'text="Agregar metodo de pago"',
-                'text="Add payment method"',
-                'text="Add card"',
-                'text="Agregar tarjeta"',
-                'button:has-text("Add")',
-                'button:has-text("Agregar")',
-                '[aria-label="Add payment method"]',
-            ]
+            # Step 4: Find add button
+            state['message'] = 'Buscando agregar tarjeta...'
+            state['step'] = 4
 
-            clicked = False
-            for sel in selectors:
+            found = False
+            for sel in ['text="Add a payment method"', 'text="Agregar metodo de pago"',
+                        'text="Add payment method"', 'text="Add card"', 'text="Agregar tarjeta"',
+                        'button:has-text("Add")', 'button:has-text("Agregar")',
+                        '[aria-label="Add payment method"]']:
                 try:
-                    elem = page.locator(sel).first
-                    if elem.is_visible(timeout=2000):
-                        elem.click()
-                        clicked = True
-                        state['message'] = 'Formulario de tarjeta abierto'
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=2000):
+                        el.click()
+                        found = True
                         time.sleep(3)
                         break
                 except:
                     continue
 
-            if not clicked:
-                state['message'] = 'No se encontro boton — busca manualmente'
+            if not found:
                 page.screenshot(path='C:/nexus-gpay/debug.png')
-                time.sleep(10)
                 state['status'] = 'error'
-                state['message'] = 'No se pudo encontrar el boton de agregar'
+                state['message'] = 'No encontre boton de agregar. Screenshot guardado.'
                 browser.close()
                 return
 
-            # Step 4: Fill card number
-            state['message'] = 'Escribiendo numero de tarjeta...'
-            num_sels = [
-                'input[name="cardNumber"]',
-                'input[aria-label*="card"]',
-                'input[aria-label*="Card"]',
-                'input[placeholder*="1234"]',
-                'input[placeholder*="card"]',
-                'input[type="tel"]',
-            ]
-            for sel in num_sels:
+            # Step 5: Fill card number
+            state['message'] = 'Escribiendo numero...'
+            state['step'] = 5
+            for sel in ['input[name="cardNumber"]', 'input[aria-label*="card"]',
+                        'input[aria-label*="Card"]', 'input[placeholder*="1234"]',
+                        'input[placeholder*="card"]', 'input[type="tel"]']:
                 try:
-                    elem = page.locator(sel).first
-                    if elem.is_visible(timeout=2000):
-                        elem.click()
-                        elem.fill(num)
-                        state['message'] = 'Numero ingreado'
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=2000):
+                        el.click()
+                        el.fill(num)
                         break
                 except:
                     continue
 
             time.sleep(1)
 
-            # Step 5: Fill expiry
+            # Fill expiry
             state['message'] = 'Escribiendo vencimiento...'
-            exp_sels = [
-                'input[name="expiryDate"]',
-                'input[aria-label*="expir"]',
-                'input[aria-label*="Expir"]',
-                'input[placeholder*="MM"]',
-                'input[placeholder*="expir"]',
-            ]
-            for sel in exp_sels:
+            for sel in ['input[name="expiryDate"]', 'input[aria-label*="expir"]',
+                        'input[aria-label*="Expir"]', 'input[placeholder*="MM"]']:
                 try:
-                    elem = page.locator(sel).first
-                    if elem.is_visible(timeout=2000):
-                        elem.click()
-                        elem.fill(f"{month}/{year}")
-                        state['message'] = 'Vencimiento ingreado'
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=2000):
+                        el.click()
+                        el.fill(f"{month}/{year}")
                         break
                 except:
                     continue
@@ -316,40 +353,29 @@ def run_agent(num, exp):
             time.sleep(2)
 
             # Step 6: Submit
-            state['message'] = 'Enviando...'
-            submit_sels = [
-                'text="Save"',
-                'text="Guardar"',
-                'text="Add"',
-                'text="Agregar"',
-                'text="Confirm"',
-                'button[type="submit"]',
-            ]
-            for sel in submit_sels:
+            state['message'] = 'Confirmando...'
+            state['step'] = 6
+            for sel in ['text="Save"', 'text="Guardar"', 'text="Add"', 'text="Agregar"',
+                        'text="Confirm"', 'button[type="submit"]']:
                 try:
-                    elem = page.locator(sel).first
-                    if elem.is_visible(timeout=2000):
-                        elem.click()
-                        state['message'] = 'Formulario enviado'
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=2000):
+                        el.click()
                         time.sleep(5)
                         break
                 except:
                     continue
 
-            # Step 7: Check for verification
-            verify_sels = [
-                'text="Verify"',
-                'text="Verificar"',
-                'text="Enter code"',
-                'input[name="verificationCode"]',
-            ]
-            for sel in verify_sels:
+            # Step 7: Verification
+            state['message'] = 'Verificando...'
+            state['step'] = 7
+            for sel in ['text="Verify"', 'text="Verificar"', 'text="Enter code"',
+                        'input[name="verificationCode"]']:
                 try:
-                    elem = page.locator(sel).first
-                    if elem.is_visible(timeout=2000):
-                        state['status'] = 'waiting_verify'
-                        state['message'] = 'Necesita codigo — ingresa en el navegador'
-                        input("Esperando verificacion...")
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=2000):
+                        state['message'] = 'Ingresa codigo en el navegador'
+                        time.sleep(10)
                         break
                 except:
                     continue
@@ -357,7 +383,7 @@ def run_agent(num, exp):
             # Done
             page.screenshot(path='C:/nexus-gpay/result.png')
             state['status'] = 'done'
-            state['message'] = '✅ Proceso completado — verifica en Google Pay'
+            state['message'] = '✅ Tarjeta agregada — verifica en Google Pay'
             time.sleep(3)
             browser.close()
 
@@ -367,8 +393,14 @@ def run_agent(num, exp):
 
 
 if __name__ == '__main__':
+    local_ip = get_local_ip()
     print("")
-    print("⚡ NexusPay Agent — http://localhost:5050")
-    print("Abre en tu navegador y usa el agente automatico")
+    print("⚡ NexusPay Agent v1.0")
     print("")
-    app.run(host='127.0.0.1', port=5050, debug=False)
+    print(f"  PC:     http://localhost:5050")
+    print(f"  Celular: http://{local_ip}:5050")
+    print("")
+    print("  Desde el celular, abre la URL de arriba")
+    print("  en la misma red WiFi que la PC")
+    print("")
+    app.run(host='0.0.0.0', port=5050, debug=False)
