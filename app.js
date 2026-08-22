@@ -1,47 +1,24 @@
-/* NexusPay v3.1 — Buttons that ACTUALLY work */
+/* NexusPay v3.2 — Button ALWAYS works */
 var paymentsClient = null;
 var gpayReady = false;
 
-// ==================== INIT ====================
-document.addEventListener('DOMContentLoaded', function() {
-    initTabs();
-    initForm();
-    console.log('[NexusPay] DOM ready, waiting for Google Pay script...');
-});
-
-// ==================== HELPERS ====================
 function el(id) { return document.getElementById(id); }
 
 function cp(t) {
     try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(t).then(function() {
-                console.log('[NexusPay] Copied via clipboard API');
-            }).catch(function() {
-                fallbackCopy(t);
-            });
+            navigator.clipboard.writeText(t);
         } else {
-            fallbackCopy(t);
+            var a = document.createElement('textarea');
+            a.value = t;
+            a.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+            document.body.appendChild(a);
+            a.focus();
+            a.select();
+            document.execCommand('copy');
+            document.body.removeChild(a);
         }
-    } catch(e) {
-        fallbackCopy(t);
-    }
-}
-
-function fallbackCopy(t) {
-    var a = document.createElement('textarea');
-    a.value = t;
-    a.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
-    document.body.appendChild(a);
-    a.focus();
-    a.select();
-    try {
-        document.execCommand('copy');
-        console.log('[NexusPay] Copied via execCommand');
-    } catch(e) {
-        console.error('[NexusPay] Copy failed:', e);
-    }
-    document.body.removeChild(a);
+    } catch(e) {}
 }
 
 function msg(t, c, ms) {
@@ -54,7 +31,7 @@ function msg(t, c, ms) {
 }
 
 // ==================== TABS ====================
-function initTabs() {
+document.addEventListener('DOMContentLoaded', function() {
     var tabs = document.querySelectorAll('.tab');
     for (var i = 0; i < tabs.length; i++) {
         tabs[i].addEventListener('click', function() {
@@ -67,41 +44,29 @@ function initTabs() {
             el('solPan').classList.add('hide');
         });
     }
-}
+    initForm();
+});
 
-// ==================== FORM — AUTO FORMAT ====================
+// ==================== FORM AUTO FORMAT ====================
 function initForm() {
-    var numInput = el('inum');
-    var expInput = el('iexp');
-
-    numInput.addEventListener('input', function() {
+    el('inum').addEventListener('input', function() {
         var raw = this.value.replace(/\s/g, '').replace(/\D/g, '').substring(0, 16);
-        var formatted = '';
+        var f = '';
         for (var i = 0; i < raw.length; i++) {
-            if (i > 0 && i % 4 === 0) formatted += ' ';
-            formatted += raw[i];
+            if (i > 0 && i % 4 === 0) f += ' ';
+            f += raw[i];
         }
-        this.value = formatted;
-        updPreview(raw);
+        this.value = f;
+        updPrev(raw);
         detBrand(raw);
     });
-
-    expInput.addEventListener('input', function() {
+    el('iexp').addEventListener('input', function() {
         var raw = this.value.replace(/\//g, '').replace(/\D/g, '').substring(0, 4);
-        if (raw.length > 2) {
-            this.value = raw.substring(0, 2) + '/' + raw.substring(2);
-        } else {
-            this.value = raw;
-        }
-        updExp();
+        this.value = raw.length > 2 ? raw.substring(0, 2) + '/' + raw.substring(2) : raw;
+        el('cexp').textContent = this.value || 'MM/AA';
     });
-
-    numInput.addEventListener('keypress', function(e) {
-        if (!/[0-9]/.test(String.fromCharCode(e.which))) e.preventDefault();
-    });
-    expInput.addEventListener('keypress', function(e) {
-        if (!/[0-9]/.test(String.fromCharCode(e.which))) e.preventDefault();
-    });
+    el('inum').addEventListener('keypress', function(e) { if (!/[0-9]/.test(String.fromCharCode(e.which))) e.preventDefault(); });
+    el('iexp').addEventListener('keypress', function(e) { if (!/[0-9]/.test(String.fromCharCode(e.which))) e.preventDefault(); });
 }
 
 function detBrand(n) {
@@ -113,10 +78,9 @@ function detBrand(n) {
     else if (/^35/.test(n)) b = 'JCB';
     el('cbrand').textContent = b;
     el('cbrand').style.color = '#34d399';
-    return b;
 }
 
-function updPreview(raw) {
+function updPrev(raw) {
     var f = '';
     for (var i = 0; i < raw.length; i++) {
         if (i > 0 && i % 4 === 0) f += ' ';
@@ -125,132 +89,76 @@ function updPreview(raw) {
     el('cnum').textContent = f || '\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022';
 }
 
-function updExp() { el('cexp').textContent = el('iexp').value || 'MM/AA'; }
 function getNum() { return el('inum').value.replace(/\s/g, ''); }
 function getExp() { return el('iexp').value; }
 function getBrand() { return el('cbrand').textContent; }
 
 function ok() {
-    var n = getNum(), e = getExp();
-    if (!n || n.length < 13) { msg('Numero invalido (minimo 13 digitos)', 'err'); return false; }
-    if (!e || e.length < 5) { msg('Vencimiento requerido (MM/AA)', 'err'); return false; }
+    if (!getNum() || getNum().length < 13) { msg('Numero invalido', 'err'); return false; }
+    if (!getExp() || getExp().length < 5) { msg('Vencimiento requerido', 'err'); return false; }
     return true;
 }
 
-// ==================== GOOGLE PAY API ====================
-var baseRequest = { apiVersion: 2, apiVersionMinor: 0 };
-var allowedCardNetworks = ['MASTERCARD', 'VISA', 'AMEX', 'DISCOVER', 'JCB'];
-var allowedAuthMethods = ['PAN_ONLY', 'CRYPTOGRAM_3DS'];
-
-var cardPaymentMethod = {
-    type: 'CARD',
-    parameters: {
-        allowedAuthMethods: allowedAuthMethods,
-        allowedCardNetworks: allowedCardNetworks
-    },
-    tokenizationSpecification: {
-        type: 'TEST',
-        parameters: { 'protocol': 'prototest' }
+// ==================== MAIN BUTTON — ALWAYS WORKS ====================
+function vincular() {
+    if (!ok()) return;
+    // If Google Pay API is ready, use it
+    if (gpayReady && paymentsClient) {
+        var req = {
+            apiVersion: 2, apiVersionMinor: 0,
+            allowedPaymentMethods: [{
+                type: 'CARD',
+                parameters: { allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'], allowedCardNetworks: ['MASTERCARD', 'VISA', 'AMEX', 'DISCOVER', 'JCB'] },
+                tokenizationSpecification: { type: 'TEST', parameters: { 'protocol': 'prototest' } }
+            }],
+            transactionInfo: { totalPriceStatus: 'NOT_CURRENTLY_KNOWN', currencyCode: 'USD' },
+            merchantInfo: { merchantName: 'NexusPay' }
+        };
+        paymentsClient.loadPaymentData(req).then(function(d) {
+            msg('✅ Tarjeta vinculada a Google Pay!', 'ok', 5000);
+        }).catch(function(e) {
+            if (e.statusCode === 'CANCELED') msg('Cancelado', 'inf');
+            else msg('Error — intenta pay.google.com', 'err', 5000);
+        });
+    } else {
+        // Fallback: open pay.google.com directly
+        msg('Abriendo Google Pay...', 'inf');
+        window.location.href = 'https://pay.google.com/gp/m/card/add';
     }
-};
-
-function getPaymentDataRequest() {
-    return Object.assign({}, baseRequest, {
-        allowedPaymentMethods: [cardPaymentMethod],
-        transactionInfo: { totalPriceStatus: 'NOT_CURRENTLY_KNOWN', currencyCode: 'USD' },
-        merchantInfo: { merchantName: 'NexusPay' }
-    });
 }
 
-// Called when Google Pay script loads
+// ==================== GOOGLE PAY API (non-blocking) ====================
 function onGooglePayLoad() {
-    console.log('[NexusPay] Google Pay script loaded');
     try {
-        paymentsClient = new google.payments.api.PaymentsClient({
-            environment: 'TEST'
-        });
-
-        paymentsClient.isReadyToPay(getPaymentDataRequest()).then(function(response) {
-            console.log('[NexusPay] isReadyToPay:', response.result);
-            if (response.result) {
+        paymentsClient = new google.payments.api.PaymentsClient({ environment: 'TEST' });
+        paymentsClient.isReadyToPay({
+            apiVersion: 2, apiVersionMinor: 0,
+            allowedPaymentMethods: [{
+                type: 'CARD',
+                parameters: { allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'], allowedCardNetworks: ['MASTERCARD', 'VISA', 'AMEX', 'DISCOVER'] },
+                tokenizationSpecification: { type: 'TEST', parameters: { 'protocol': 'prototest' } }
+            }]
+        }).then(function(r) {
+            if (r.result) {
                 gpayReady = true;
-                createGPayButton();
-                el('gpayBadge').textContent = '✅ Google Pay Listo';
+                // Show native GPay button, hide fallback
+                var btn = paymentsClient.createButton({ onClick: vincular, buttonType: 'pay', buttonSizeMode: 'fill' });
+                el('gpayBtnContainer').appendChild(btn);
+                el('btnVincular').style.display = 'none';
+                el('gpayBadge').textContent = '✅ Google Pay';
                 el('gpayBadge').style.cssText = 'color:#34d399;border-color:rgba(52,211,153,.3)';
-            } else {
-                console.log('[NexusPay] Google Pay not ready, showing fallback');
-                showManualButton();
             }
-        }).catch(function(err) {
-            console.error('[NexusPay] isReadyToPay error:', err);
-            showManualButton();
         });
-    } catch (e) {
-        console.error('[NexusPay] Init error:', e);
-        showManualButton();
-    }
+    } catch(e) { /* keep fallback visible */ }
 }
 
-function onGooglePayError() {
-    console.log('[NexusPay] Google Pay script FAILED to load');
-    showManualButton();
-}
+function onGooglePayError() { /* keep fallback visible */ }
 
-function createGPayButton() {
-    try {
-        var btn = paymentsClient.createButton({
-            onClick: onGPayClick,
-            buttonType: 'pay',
-            buttonSizeMode: 'fill'
-        });
-        el('gpayBtnContainer').innerHTML = '';
-        el('gpayBtnContainer').appendChild(btn);
-        el('gpayFallback').classList.add('hide');
-        console.log('[NexusPay] Native GPay button rendered');
-    } catch (e) {
-        console.error('[NexusPay] Button error:', e);
-        showManualButton();
-    }
-}
-
-function showManualButton() {
-    el('gpayBtnContainer').innerHTML = '';
-    el('gpayFallback').classList.remove('hide');
-    el('gpayNote').textContent = 'Google Pay API no disponible — usa el boton o Copiar Datos';
-    el('gpayBadge').textContent = '⚠️ Modo Alternativo';
-    el('gpayBadge').style.cssText = 'color:#fbbf24;border-color:rgba(251,191,36,.3)';
-}
-
-// GPay button click — opens native sheet
-function onGPayClick() {
-    if (!ok()) return;
-    console.log('[NexusPay] Opening Google Pay sheet...');
-    paymentsClient.loadPaymentData(getPaymentDataRequest()).then(function(paymentData) {
-        console.log('[NexusPay] Success!', paymentData);
-        msg('✅ Tarjeta vinculada a Google Pay!', 'ok', 5000);
-    }).catch(function(err) {
-        console.error('[NexusPay] Error:', err);
-        if (err.statusCode === 'CANCELED') {
-            msg('Cancelado', 'inf');
-        } else {
-            msg('Error: ' + (err.message || 'Intenta Copiar Datos'), 'err', 5000);
-        }
-    });
-}
-
-// Manual fallback — ALWAYS opens pay.google.com
-function gpayManual() {
-    if (!ok()) return;
-    console.log('[NexusPay] Opening pay.google.com...');
-    window.location.href = 'https://pay.google.com/gp/m/card/add';
-}
-
-// ==================== METHOD 2: Copy ====================
+// ==================== COPY ====================
 function m2a() {
     if (!ok()) return;
-    var t = 'TARJETA GOOGLE PAY\nNumero: ' + getNum() + '\nVence: ' + getExp() + '\nRed: ' + getBrand() + '\n\nGoogle Pay > + > Tarjeta > Pegar datos';
-    cp(t);
-    msg('Datos copiados — abre Google Pay y pega', 'ok');
+    cp('TARJETA GOOGLE PAY\nNumero: ' + getNum() + '\nVence: ' + getExp() + '\nRed: ' + getBrand());
+    msg('Datos copiados', 'ok');
 }
 
 function m2b() {
@@ -259,27 +167,18 @@ function m2b() {
     msg('Copiado', 'ok');
 }
 
-// ==================== METHOD 3 & 4: Web URLs ====================
-function m4a() {
-    console.log('[NexusPay] Opening pay.google.com');
-    window.location.href = 'https://pay.google.com/gp/m/card/add';
-    msg('Abriendo Google Pay Web...', 'inf');
-}
-
-function m4b() {
-    console.log('[NexusPay] Opening wallet.google.com');
-    window.location.href = 'https://wallet.google.com/manage/methods';
-    msg('Abriendo Google Wallet...', 'inf');
-}
+// ==================== WEB URLs ====================
+function m4a() { window.location.href = 'https://pay.google.com/gp/m/card/add'; }
+function m4b() { window.location.href = 'https://wallet.google.com/manage/methods'; }
 
 // ==================== ERROR SOLUTIONS ====================
 var SOLS = {
-    ca: { t: '❌ "No se puede agregar"', h: '<h4>Causas:</h4><ul><li>Banco no participa en Google Pay</li><li>Tarjeta prepago sin tokenizacion</li><li>Bloqueo antifraude temporal</li></ul><h4>Soluciones:</h4><ol><li><strong>Espera 24 horas</strong></li><li><strong>Llama al banco</strong> — pide habilitar "pagos digitales"</li><li><strong>Prueba Copiar</strong> — siempre funciona</li><li><strong>Cambia Google Account</strong></li></ol>' },
-    sw: { t: '⚠️ "Algo salio mal" (error 006)', h: '<h4>Soluciones:</h4><ol><li><strong>Espera 5-15 minutos</strong></li><li><strong>Cambia WiFi a datos</strong></li><li><strong>Modo avion 10 seg</strong></li><li><strong>Reinicia telefono</strong></li></ol><p><strong>NO intentes mas de 3 veces</strong></p>' },
-    aa: { t: '🔁 "Ya esta agregada"', h: '<ol><li><strong>Ve a Google Pay > Metodos de pago</strong></li><li><strong>Revisa otros Accounts</strong></li><li><strong>Elimina y re-agrega</strong></li></ol>' },
-    ns: { t: '🏦 "Banco no compatible"', h: '<h4>Bancos compatibles:</h4><p>Chase, BofA, Wells, Citi, Capital One, Discover, US Bank, PNC, TD, Truist</p>' },
-    vf: { t: '🔐 "Fallo verificacion"', h: '<ol><li><strong>Verifica numero EXACTO</strong></li><li><strong>Prueba pay.google.com</strong></li><li><strong>Contacta banco</strong></li></ol>' },
-    rg: { t: '🌍 "Region no soportada"', h: '<ol><li><strong>Cambia region Google</strong></li><li><strong>Usa VPN a USA</strong></li><li><strong>Prueba pay.google.com</strong></li></ol>' }
+    ca: { t: '❌ "No se puede agregar"', h: '<h4>Causas:</h4><ul><li>Banco no participa en Google Pay</li><li>Bloqueo antifraude temporal</li></ul><h4>Soluciones:</h4><ol><li><strong>Espera 24 horas</strong></li><li><strong>Llama al banco</strong> — pide habilitar "pagos digitales"</li><li><strong>Prueba Copiar</strong></li><li><strong>Cambia Google Account</strong></li></ol>' },
+    sw: { t: '⚠️ "Algo salio mal"', h: '<ol><li><strong>Espera 5-15 minutos</strong></li><li><strong>Cambia WiFi a datos</strong></li><li><strong>Modo avion 10 seg</strong></li><li><strong>Reinicia telefono</strong></li></ol>' },
+    aa: { t: '🔁 "Ya esta agregada"', h: '<ol><li><strong>Google Pay > Metodos de pago</strong></li><li><strong>Revisa otros Accounts</strong></li><li><strong>Elimina y re-agrega</strong></li></ol>' },
+    ns: { t: '🏦 "Banco no compatible"', h: '<p>Chase, BofA, Wells, Citi, Capital One, Discover, US Bank, PNC, TD, Truist</p>' },
+    vf: { t: '🔐 "Fallo verificacion"', h: '<ol><li><strong>Verifica datos EXACTOS</strong></li><li><strong>Prueba pay.google.com</strong></li><li><strong>Contacta banco</strong></li></ol>' },
+    rg: { t: '🌍 "Region no soportada"', h: '<ol><li><strong>Cambia region Google</strong></li><li><strong>VPN a USA</strong></li><li><strong>pay.google.com</strong></li></ol>' }
 };
 
 function esol(k) {
@@ -290,5 +189,3 @@ function esol(k) {
     el('solPan').classList.remove('hide');
     el('solPan').scrollIntoView({ behavior: 'smooth' });
 }
-
-console.log('[NexusPay] app.js loaded successfully');
