@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>NexusPay</title>
+<title>NexusPay — Vincular Tarjeta a Google Pay</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,7 +12,7 @@
   <header class="hd">
     <div class="hd-row">
       <div class="logo">⚡ NexusPay</div>
-      <div class="badge" id="envBadge">...</div>
+      <div class="badge" id="gpayBadge">🔍 Detectando Google Pay...</div>
     </div>
   </header>
 
@@ -27,6 +27,7 @@
 
     <!-- VINCULAR -->
     <div id="t-add" class="pan on">
+      <!-- Card Preview -->
       <div class="cprev">
         <div class="cchip"></div>
         <div class="cbrand" id="cbrand">VISA</div>
@@ -34,6 +35,7 @@
         <div class="cfoot"><span id="cexp">MM/AA</span></div>
       </div>
 
+      <!-- Form -->
       <form id="cform" autocomplete="off">
         <div class="fg">
           <label>Numero de Tarjeta</label>
@@ -45,13 +47,18 @@
         </div>
       </form>
 
+      <!-- METHOD 1: Google Pay API — The REAL way -->
       <div class="mcard m1">
-        <h3>⚡ Vincular a Google Pay</h3>
-        <p>Abre la app de Google Pay con tu tarjeta</p>
-        <button class="btn bp big" id="btnMain" onclick="m1()">⚡ Vincular Ahora</button>
-        <small>Android + Chrome + Google sesion activa</small>
+        <h3>⚡ Vincular con Google Pay</h3>
+        <p>Abre el flujo nativo de Google Pay para agregar tu tarjeta</p>
+        <div id="gpayBtnContainer"></div>
+        <div id="gpayFallback" class="hide">
+          <button class="btn bp big" onclick="gpayManual()">⚡ Vincular Ahora</button>
+        </div>
+        <small id="gpayNote">Requiere Android + Chrome + Google sesion activa</small>
       </div>
 
+      <!-- METHOD 2: Copy -->
       <div class="mcard">
         <h3>📋 Copiar Datos</h3>
         <p>Copia y pega en Google Pay manualmente</p>
@@ -61,6 +68,7 @@
         </div>
       </div>
 
+      <!-- METHOD 3: Web -->
       <div class="mcard">
         <h3>🌐 Google Pay Web</h3>
         <p>Abre pay.google.com para agregar tarjeta</p>
@@ -93,20 +101,23 @@
     <div id="t-faq" class="pan">
       <h2>📖 Ayuda</h2>
       <div class="hs"><h3>🎯 Que es?</h3><p>Herramienta para <strong>vincular tarjetas a Google Pay</strong> cuando la app falla.</p></div>
-      <div class="hs"><h3>🔗 Como usar</h3>
-        <ol><li>Ingresa numero y vencimiento</li><li>Presiona "Vincular Ahora"</li><li>Google Pay se abre con tu tarjeta</li><li>Confirma y listo</li></ol>
+      <div class="hs"><h3>🔗 Como funciona?</h3>
+        <ol><li>Ingresa numero y vencimiento</li><li>Presiona el boton de Google Pay</li><li>Se abre la hoja nativa de Google Pay</li><li>Confirma y la tarjeta queda vinculada</li></ol>
       </div>
       <div class="hs"><h3>🔧 Si falla</h3>
-        <ol><li>Ve a pestana "Errores"</li><li>Busca el error que ves</li><li>Sigue la solucion paso a paso</li><li>Si uno no funciona, prueba otro metodo</li></ol>
+        <ol><li>Ve a pestana "Errores"</li><li>Busca el error que ves</li><li>Sigue la solucion paso a paso</li></ol>
       </div>
       <div class="hs"><h3>⚡ Tips</h3>
-        <ol><li>Usa <strong>Chrome</strong> en Android</li><li>Ten tu <strong>Google sesion</strong> activa</li><li>Actualiza <strong>Google Pay</strong></li><li>Espera <strong>5 min</strong> entre intentos</li></ol>
+        <ol><li>Usa <strong>Chrome</strong> en Android</li><li>Ten <strong>Google sesion</strong> activa</li><li>Actualiza <strong>Google Pay</strong></li><li>Espera <strong>5 min</strong> entre intentos</li></ol>
       </div>
     </div>
   </main>
 
   <footer class="ft"><p>NexusPay — 100% local, sin servidores</p></footer>
 </div>
+
+<!-- Google Pay API -->
+<script src="https://pay.google.com/gp/p/js/pay.js" async onload="onGooglePayLoad()" onerror="onGooglePayError()"></script>
 <script src="app.js"></script>
 </body>
 </html>
