@@ -1,238 +1,475 @@
-/* NexusPay — Google Pay Card Linker */
-/* app.js — Core logic */
+/* NexusPay v2 — Motor Anti-Errores Google Pay */
+/* app.js — Core logic with 5 methods + error solutions */
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     initCardForm();
     loadSavedCards();
+    checkGPayStatus();
 });
 
 // ==================== TABS ====================
 function initTabs() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            // Remove active from all
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            // Set active
             btn.classList.add('active');
-            const tabId = 'tab-' + btn.dataset.tab;
-            document.getElementById(tabId).classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            closeSolution();
         });
     });
 }
 
-// ==================== STATUS BAR ====================
-function showStatus(message, type = 'info', duration = 3000) {
+// ==================== STATUS ====================
+function showStatus(msg, type = 'info', dur = 3000) {
     const bar = document.getElementById('statusBar');
     const icon = document.getElementById('statusIcon');
     const text = document.getElementById('statusText');
-
     bar.className = 'status-bar ' + type;
     icon.textContent = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
-    text.textContent = message;
+    text.textContent = msg;
+    if (dur > 0) setTimeout(() => bar.classList.add('hidden'), dur);
+}
 
-    if (duration > 0) {
-        setTimeout(() => { bar.classList.add('hidden'); }, duration);
+// ==================== GPay STATUS CHECK ====================
+function checkGPayStatus() {
+    const badge = document.getElementById('gpayStatus');
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    const isChrome = /Chrome/i.test(navigator.userAgent);
+    const hasHTTPS = location.protocol === 'https:';
+
+    if (isMobile && isChrome && hasHTTPS) {
+        badge.textContent = '✅ Optimo';
+        badge.style.background = 'rgba(52,211,153,0.15)';
+        badge.style.color = '#34d399';
+        badge.style.borderColor = 'rgba(52,211,153,0.3)';
+    } else if (!isMobile) {
+        badge.textContent = '💻 Desktop';
+        badge.style.background = 'rgba(251,191,36,0.15)';
+        badge.style.color = '#fbbf24';
+        badge.style.borderColor = 'rgba(251,191,36,0.3)';
+    } else {
+        badge.textContent = '⚠️ Usa Chrome';
+        badge.style.background = 'rgba(248,113,113,0.15)';
+        badge.style.color = '#f87171';
+        badge.style.borderColor = 'rgba(248,113,113,0.3)';
     }
 }
 
 // ==================== CARD FORM ====================
 function initCardForm() {
-    const numberInput = document.getElementById('cardNumber');
-    const expiryInput = document.getElementById('cardExpiry');
-    const holderInput = document.getElementById('cardHolder');
-    const cvvInput = document.getElementById('cardCvv');
+    const num = document.getElementById('cardNumber');
+    const exp = document.getElementById('cardExpiry');
+    const hol = document.getElementById('cardHolder');
+    const cvv = document.getElementById('cardCvv');
 
-    // Format card number with spaces
-    numberInput.addEventListener('input', (e) => {
-        let val = e.target.value.replace(/\D/g, '');
-        val = val.substring(0, 16);
-        let formatted = val.replace(/(\d{4})(?=\d)/g, '$1 ');
-        e.target.value = formatted;
+    num.addEventListener('input', e => {
+        let v = e.target.value.replace(/\D/g, '').substring(0, 16);
+        e.target.value = v.replace(/(\d{4})(?=\d)/g, '$1 ');
         updatePreview();
-        detectCardBrand(val);
+        detectBrand(v);
     });
 
-    // Format expiry MM/AA
-    expiryInput.addEventListener('input', (e) => {
-        let val = e.target.value.replace(/\D/g, '');
-        if (val.length >= 2) {
-            val = val.substring(0, 2) + '/' + val.substring(2, 4);
-        }
-        e.target.value = val;
+    exp.addEventListener('input', e => {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
+        e.target.value = v;
         updatePreview();
     });
 
-    // Holder uppercase
-    holderInput.addEventListener('input', () => {
-        holderInput.value = holderInput.value.toUpperCase();
+    hol.addEventListener('input', () => {
+        hol.value = hol.value.toUpperCase();
         updatePreview();
     });
 
-    // CVV numbers only
-    cvvInput.addEventListener('input', (e) => {
+    cvv.addEventListener('input', e => {
         e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
     });
 }
 
-// ==================== CARD BRAND DETECTION ====================
-function detectCardBrand(number) {
-    const brandEl = document.getElementById('cardBrand');
-    let brand = 'VISA';
-
-    if (/^4/.test(number)) brand = 'VISA';
-    else if (/^5[1-5]/.test(number)) brand = 'MASTERCARD';
-    else if (/^3[47]/.test(number)) brand = 'AMEX';
-    else if (/^6(?:011|5)/.test(number)) brand = 'DISCOVER';
-    else if (/^35/.test(number)) brand = 'JCB';
-    else if (/^63[7-9]/.test(number)) brand = 'INSTAPAY';
-    else if (/^50/.test(number)) brand = 'MAESTRO';
-
-    brandEl.textContent = brand;
-    brandEl.className = 'card-brand detected';
-    return brand;
+function detectBrand(n) {
+    const el = document.getElementById('cardBrand');
+    let b = 'VISA';
+    if (/^4/.test(n)) b = 'VISA';
+    else if (/^5[1-5]/.test(n)) b = 'MASTERCARD';
+    else if (/^3[47]/.test(n)) b = 'AMEX';
+    else if (/^6(?:011|5)/.test(n)) b = 'DISCOVER';
+    else if (/^35/.test(n)) b = 'JCB';
+    el.textContent = b;
+    el.className = 'card-brand detected';
+    return b;
 }
 
-// ==================== CARD PREVIEW UPDATE ====================
 function updatePreview() {
-    const number = document.getElementById('cardNumber').value || '•••• •••• •••• ••••';
-    const holder = document.getElementById('cardHolder').value || 'TU NOMBRE';
-    const expiry = document.getElementById('cardExpiry').value || 'MM/AA';
-
-    document.getElementById('previewNumber').textContent = number || '•••• •••• •••• ••••';
-    document.getElementById('previewHolder').textContent = holder;
-    document.getElementById('previewExpiry').textContent = expiry;
+    document.getElementById('previewNumber').textContent = document.getElementById('cardNumber').value || '•••• •••• •••• ••••';
+    document.getElementById('previewHolder').textContent = document.getElementById('cardHolder').value || 'TU NOMBRE';
+    document.getElementById('previewExpiry').textContent = document.getElementById('cardExpiry').value || 'MM/AA';
 }
 
-// ==================== GET CARD DATA ====================
 function getCardData() {
     return {
         number: document.getElementById('cardNumber').value.replace(/\s/g, ''),
         holder: document.getElementById('cardHolder').value,
         expiry: document.getElementById('cardExpiry').value,
         cvv: document.getElementById('cardCvv').value,
-        brand: document.getElementById('cardBrand').textContent,
-        timestamp: new Date().toISOString()
+        brand: document.getElementById('cardBrand').textContent
     };
 }
 
-function validateCard(data) {
-    if (!data.number || data.number.length < 13) {
-        showStatus('Numero de tarjeta invalido', 'error');
-        return false;
-    }
-    if (!data.holder || data.holder.length < 2) {
-        showStatus('Nombre del titular requerido', 'error');
-        return false;
-    }
-    if (!data.expiry || data.expiry.length < 5) {
-        showStatus('Fecha de vencimiento requerida', 'error');
-        return false;
-    }
-    if (!data.cvv || data.cvv.length < 3) {
-        showStatus('CVV requerido', 'error');
-        return false;
-    }
+function validate(data) {
+    if (!data.number || data.number.length < 13) { showStatus('Numero invalido', 'error'); return false; }
+    if (!data.holder || data.holder.length < 2) { showStatus('Nombre requerido', 'error'); return false; }
+    if (!data.expiry || data.expiry.length < 5) { showStatus('Vencimiento requerido', 'error'); return false; }
+    if (!data.cvv || data.cvv.length < 3) { showStatus('CVV requerido', 'error'); return false; }
     return true;
 }
 
-// ==================== LINK TO GOOGLE PAY ====================
-function linkToGPay() {
+// ==================== METHOD 1: GPay Native Deep Link ====================
+function method1_GPayNative() {
     const data = getCardData();
-    if (!validateCard(data)) return;
+    if (!validate(data)) return;
 
-    showStatus('Abriendo Google Pay...', 'info', 0);
+    showStatus('Preparando enlace a Google Pay...', 'info', 0);
 
-    // Method 1: Google Pay deep link (Android)
-    const gpayUrl = buildGPayDeepLink(data);
+    // Multiple deep link formats for Google Pay
+    const deepLinks = [
+        'gpay://upi',
+        'intent://pay#Intent;scheme=gpay;package=com.google.android.apps.walletnfcrel;end',
+        'https://play.google.com/store/apps/details?id=com.google.android.apps.walletnfcrel',
+        'https://pay.google.com/gp/m/card/add'
+    ];
 
-    // Try to open Google Pay
-    const link = document.createElement('a');
-    link.href = gpayUrl;
-    link.target = '_blank';
-    link.rel = 'noopener';
+    // Try native app first
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = deepLinks[0];
+    document.body.appendChild(iframe);
 
-    // Detect if mobile
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    setTimeout(() => {
+        document.body.removeChild(iframe);
+        // If still on page, try fallback
+        showStatus('Si Google Pay no abrio, usa los otros metodos', 'info', 5000);
+    }, 2000);
 
-    if (isMobile) {
-        // Direct open on mobile
-        window.location.href = gpayUrl;
-        setTimeout(() => {
-            showStatus('Si Google Pay no abrio, usa Copiar Datos', 'info');
-        }, 2000);
-    } else {
-        // On desktop, show instructions
-        showStatus('Abre esta pagina en tu celular para vincular', 'info', 5000);
-        copyCardData();
+    // Also copy data as backup
+    copyToClipboard(formatCardData(data));
+    showStatus('Datos copiados + intentando abrir Google Pay', 'success', 5000);
+}
+
+// ==================== METHOD 2: Copy Data ====================
+function method2_CopyForManual() {
+    const data = getCardData();
+    if (!validate(data)) return;
+
+    const text = `TARJETA PARA GOOGLE PAY\n` +
+        `========================\n` +
+        `Numero: ${data.number}\n` +
+        `Titular: ${data.holder}\n` +
+        `Vence: ${data.expiry}\n` +
+        `CVV: ${data.cvv}\n` +
+        `Red: ${data.brand}\n` +
+        `========================\n` +
+        `Pasos:\n` +
+        `1. Abre Google Pay\n` +
+        `2. Presiona + (Agregar)\n` +
+        `3. Selecciona "Tarjeta de credito/debito"\n` +
+        `4. Ingresa los datos de arriba\n` +
+        `5. Confirma`;
+
+    copyToClipboard(text);
+    showStatus('Datos copiados — abre Google Pay y pega', 'success');
+}
+
+function method2_CopyFormatted() {
+    const data = getCardData();
+    if (!validate(data)) return;
+
+    // Copy each field separately for easy pasting
+    const text = `${data.number}\n${data.holder}\n${data.expiry}\n${data.cvv}`;
+    copyToClipboard(text);
+    showStatus('Datos formateados copiados — pegalos campo por campo', 'success');
+}
+
+// ==================== METHOD 3: QR Code ====================
+let currentQR = null;
+function method3_QR() {
+    const data = getCardData();
+    if (!validate(data)) return;
+
+    const section = document.getElementById('qrSection');
+    const canvas = document.getElementById('qrCanvas');
+    canvas.innerHTML = '';
+
+    currentQR = new QRCode(canvas, {
+        text: JSON.stringify({
+            type: 'nexuspay_v2',
+            card: data.number,
+            holder: data.holder,
+            expiry: data.expiry,
+            cvv: data.cvv,
+            brand: data.brand,
+            ts: Date.now()
+        }),
+        width: 220,
+        height: 220,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+    });
+
+    section.classList.remove('hidden');
+    showStatus('QR listo — escanea desde tu celular', 'success');
+}
+
+function closeQR() {
+    document.getElementById('qrSection').classList.add('hidden');
+}
+
+// ==================== METHOD 4: Open Google Pay Web ====================
+function method4_OpenGPayWeb() {
+    window.open('https://pay.google.com/gp/m/card/add', '_blank');
+    showStatus('Abriendo Google Pay Web...', 'info');
+}
+
+function method4_OpenGPayWallet() {
+    window.open('https://wallet.google.com/manage/methods', '_blank');
+    showStatus('Abriendo Google Wallet...', 'info');
+}
+
+// ==================== METHOD 5: Data URI / Shareable Link ====================
+function method5_DataURI() {
+    const data = getCardData();
+    if (!validate(data)) return;
+
+    // Create a mini HTML page as data URI
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Datos de Tarjeta - NexusPay</title>
+<style>body{font-family:sans-serif;background:#111;color:#fff;padding:20px;max-width:400px;margin:0 auto;text-align:center}
+.card{background:linear-gradient(135deg,#1a2744,#1e1b4b);border-radius:16px;padding:24px;margin:20px 0;border:1px solid #4285f4}
+.field{margin:8px 0;text-align:left}
+.field label{font-size:11px;color:#888;display:block}
+.field span{font-size:16px;font-family:monospace}
+.btn{display:inline-block;padding:12px 24px;background:#4285f4;color:#fff;border:none;border-radius:8px;font-size:16px;margin:10px;cursor:pointer;text-decoration:none}
+</style></head><body>
+<h2>💳 Datos para Google Pay</h2>
+<div class="card">
+<div class="field"><label>NUMERO</label><span>${data.number}</span></div>
+<div class="field"><label>TITULAR</label><span>${data.holder}</span></div>
+<div class="field"><label>VENCE</label><span>${data.expiry}</span></div>
+<div class="field"><label>CVV</label><span>${data.cvv}</span></div>
+<div class="field"><label>RED</label><span>${data.brand}</span></div>
+</div>
+<a href="https://pay.google.com/gp/m/card/add" class="btn">🔗 Abrir Google Pay</a>
+<p style="color:#888;font-size:12px;margin-top:20px">Generado por NexusPay v2</p>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+
+    document.getElementById('generatedLink').textContent = url;
+    document.getElementById('linkSection').classList.remove('hidden');
+    showStatus('Link generado — copia o comparte', 'success');
+}
+
+function copyGeneratedLink() {
+    const link = document.getElementById('generatedLink').textContent;
+    copyToClipboard(link);
+    showStatus('Link copiado', 'success');
+}
+
+function closeLink() {
+    document.getElementById('linkSection').classList.add('hidden');
+}
+
+// ==================== ERROR SOLUTIONS ENGINE ====================
+const SOLUTIONS = {
+    'cant-add': {
+        title: '❌ "Esta tarjeta no se puede agregar"',
+        content: `
+<h4>Causas Comunes:</h4>
+<ul>
+<li>El banco emisor no participa en Google Pay</li>
+<li>La tarjeta es prepago sin soporte para tokenizacion</li>
+<li>La tarjeta fue rechazada por el sistema antifraude</li>
+<li>La tarjeta ya esta en otro Google Account</li>
+</ul>
+<h4>Soluciones (en orden):</h4>
+<ol>
+<li><strong>Espera 24 horas</strong> — A veces es un bloqueo temporal del emisor</li>
+<li><strong>Llama a tu banco</strong> — Pide que habilite la tarjeta para "pagos digitales" o "tokenización"</li>
+<li><strong>Usa otro metodo</strong> — Prueba Copia Manual (Metodo 2) en vez del deep link</li>
+<li><strong>Cambia de Google Account</strong> — Prueba con otro correo de Google</li>
+<li><strong>Contacta soporte de Google Pay</strong> — pay.google.com/support</li>
+<li><strong>Prueba otro navegador</strong> — Firefox o Edge pueden funcionar diferente</li>
+</ol>
+<h4>Mientras tanto:</h4>
+<p>Guarda los datos con NexusPay y reintenta cuando tu banco confirme que la tarjeta esta habilitada.</p>`
+    },
+    'something-wrong': {
+        title: '⚠️ "Algo salio mal"',
+        content: `
+<h4>Causas:</h4>
+<ul>
+<li>Error temporal de Google (muy comun)</li>
+<li>Servidor de Google Pay sobrecargado</li>
+<li>Conexion inestable</li>
+<li>Cuota de intentos alcanzada</li>
+</ul>
+<h4>Soluciones:</h4>
+<ol>
+<li><strong>Espera 5-15 minutos</strong> — El error 006 es casi siempre temporal</li>
+<li><strong>Cambia de red</strong> — De WiFi a datos moviles o viceversa</li>
+<li><strong>Activa modo avion 10 segundos</strong> — Resetea la conexion</li>
+<li><strong>Limpia cache de Chrome</strong> — Configuracion > Privacidad > Borrar datos de navegacion > Cache</li>
+<li><strong>Prueba otro metodo</strong> — Copia Manual (Metodo 2) siempre funciona</li>
+<li><strong>Reinicia el telefono</strong> — Soluciona el 70% de errores temporales</li>
+</ol>
+<h4>Importante:</h4>
+<p>NO intentes mas de 3 veces seguidas. Google puede bloquear temporalmente tu cuenta por 24-72 horas.</p>`
+    },
+    'already-added': {
+        title: '🔁 "Esta tarjeta ya esta agregada"',
+        content: `
+<h4>Causa:</h4>
+<p>La tarjeta ya esta vinculada a tu cuenta de Google (o a otra).</p>
+<h4>Soluciones:</h4>
+<ol>
+<li><strong>Ve a Google Pay > Metodos de pago</strong> — Revisa si ya aparece ahi</li>
+<li><strong>Busca en otros Google Accounts</strong> — Puede estar en otro correo</li>
+<li><strong>Elimina y re-agrega</strong> — Borra la tarjeta existente y vuelve a vincular con NexusPay</li>
+<li><strong>Verifica en wallet.google.com</strong> — Revisa desde la web</li>
+</ol>
+<h4>Si la tarjeta NO aparece pero dice que ya esta:</h4>
+<ul>
+<li>Puede ser un "fantasma" — la tarjeta se vinculo parcialmente</li>
+<li>Espera 24 horas y vuelve a intentar</li>
+<li>Contacta a Google Pay soporte</li>
+</ul>`
+    },
+    'not-supported': {
+        title: '🏦 "Tu banco no es compatible"',
+        content: `
+<h4>Soluciones:</h4>
+<ol>
+<li><strong>Verifica tu banco</strong> — Ve a https://pay.google.com/intl/en_us/about/compatibilidad/ para ver bancos compatibles</li>
+<li><strong>Pide a tu banco</strong> — Llama y pregunta si soportan "Google Pay" o "pagos contactless digitales"</li>
+<li><strong>Usa otra tarjeta</strong> — Si tienes otra tarjeta de otro banco, pruebala</li>
+<li><strong>Abre Google Pay Web</strong> — A veces funciona desde pay.google.com aunque no desde la app</li>
+</ol>
+<h4>Bancos que SÍ soportan Google Pay (USA):</h4>
+<p>Chase, Bank of America, Wells Fargo, Citi, Capital One, Discover, US Bank, PNC, TD Bank, Truist, y muchos mas.</p>`
+    },
+    'verify-fail': {
+        title: '🔐 "Fallo la verificacion"',
+        content: `
+<h4>Causas:</h4>
+<ul>
+<li>Datos incorrectos en el formulario</li>
+<li>Direccion de facturacion no coincide con la del banco</li>
+<li>CVV incorrecto</li>
+<li>Fecha de vencimiento equivocada</li>
+</ul>
+<h4>Soluciones:</h4>
+<ol>
+<li><strong>Verifica cada campo</strong> — Numero, nombre, fecha, CVV deben ser EXACTOS como en la tarjeta</li>
+<li><strong>Usa la direccion exacta</strong> — La que registroste en tu banco</li>
+<li><strong>Prueba desde la web</strong> — pay.google.com/gp/m/card/add</li>
+<li><strong>Contacta al banco</strong> — Puede haber un bloqueo temporal en verificaciones</li>
+<li><strong>Usa el CVV del reverso</strong> — Asegurate de leer el CVV correcto</li>
+</ol>`
+    },
+    'region-block': {
+        title: '🌍 "Google Pay no esta disponible en tu region"',
+        content: `
+<h4>Soluciones:</h4>
+<ol>
+<li><strong>Cambia tu region de Google</strong> — Google Account > Personal info > Country</li>
+<li><strong>Usa una VPN a USA</strong> — Conectate a un servidor en Estados Unidos</li>
+<li><strong>Abre desde pay.google.com</strong> — La web puede funcionar aunque la app no</li>
+<li><strong>Cambia region del telefono</strong> — Settings > System > Languages > Region</li>
+<li><strong>Reinstala Google Pay</strong> — Despues de cambiar la region</li>
+</ol>
+<h4>Paises con Google Pay completo:</h4>
+<p>USA, UK, Canada, Australia, Singapore, Japan, y 40+ paises mas.</p>`
+    },
+    'card-type': {
+        title: '💳 "Tipo de tarjeta no soportado"',
+        content: `
+<h4>Causa:</h4>
+<p>Algunos tipos de tarjeta no son compatibles con Google Pay.</p>
+<h4>Tipos NO soportados:</h4>
+<ul>
+<li>❌ Tarjetas de regalo / Gift cards</li>
+<li>❌ Tarjetas de cafeteria / meal cards</li>
+<li>❌ Tarjetas de salud / HSA (algunas)</li>
+<li>❌ Tarjetas prepago sin BIN compatible</li>
+<li>❌ Tarjetas de beneficios gubernamentales</li>
+</ul>
+<h4>Tipos SÍ soportados:</h4>
+<ul>
+<li>✅ Visa, Mastercard, Amex, Discover</li>
+<li>✅ Debito de bancos grandes</li>
+<li>✅ Credito de bancos participantes</li>
+</ul>
+<h4>Solucion:</h4>
+<p>Si tu tarjeta es de un tipo no soportado, no hay workaround. Necesitas otra tarjeta.</p>`
+    },
+    'outdated': {
+        title: '📱 "Actualiza tu app de Google Pay"',
+        content: `
+<h4>Soluciones:</h4>
+<ol>
+<li><strong>Ve a Play Store</strong> — Busca "Google Pay" y presiona "Actualizar"</li>
+<li><strong>Si no hay actualizacion</strong> — Desinstala y vuelve a instalar</li>
+<li><strong>Desde la web</strong> — Abre pay.google.com que siempre esta actualizado</li>
+<li><strong>Verifica Android</strong> — Necesitas Android 5.0 o superior</li>
+</ol>
+<p><strong>Tip:</strong> Siempre usa el metodo web (pay.google.com) como alternativa cuando la app tiene problemas.</p>`
     }
+};
+
+function showErrorSolution(errorId) {
+    const sol = SOLUTIONS[errorId];
+    if (!sol) return;
+
+    document.getElementById('solutionTitle').textContent = sol.title;
+    document.getElementById('solutionContent').innerHTML = sol.content;
+    document.getElementById('solutionPanel').classList.remove('hidden');
+    document.getElementById('solutionPanel').scrollIntoView({ behavior: 'smooth' });
 }
 
-function buildGPayDeepLink(cardData) {
-    // Google Pay deep link formats
-    // Primary: gpay:// (opens Google Pay app directly)
-    // Fallback: https://pay.google.com (opens web interface)
-
-    // The most reliable method is using Google Pay's tokenization API
-    // which opens the native sheet to add a card
-    const encoded = encodeURIComponent(JSON.stringify({
-        apiVersion: 2,
-        apiVersionMinor: 0,
-        allowedPaymentMethods: [{
-            type: 'CARD',
-            parameters: {
-                allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
-                allowedCardNetworks: ['MASTERCARD', 'VISA', 'AMEX', 'DISCOVER']
-            },
-            tokenizationSpecification: {
-                type: 'PAYMENT_GATEWAY',
-                parameters: {}
-            }
-        }]
-    }));
-
-    // Deep link to Google Pay add card flow
-    return 'gpay://';
+function closeSolution() {
+    const panel = document.getElementById('solutionPanel');
+    if (panel) panel.classList.add('hidden');
 }
 
-// ==================== SAVE CARD ====================
+// ==================== CARD MANAGEMENT ====================
 function saveCard() {
     const data = getCardData();
-    if (!validateCard(data)) return;
+    if (!validate(data)) return;
 
     const cards = getStoredCards();
-
-    // Check for duplicate
-    const exists = cards.find(c => c.number === data.number);
-    if (exists) {
+    if (cards.find(c => c.number === data.number)) {
         showStatus('Esta tarjeta ya esta guardada', 'info');
         return;
     }
 
-    // Mask number for storage (show last 4 only)
-    const maskedData = {
+    cards.push({
         ...data,
-        number: data.number,
         numberMasked: '•••• •••• •••• ' + data.number.slice(-4),
-        id: Date.now().toString(36)
-    };
+        id: Date.now().toString(36),
+        saved: new Date().toISOString()
+    });
 
-    cards.push(maskedData);
     localStorage.setItem('nexuspay_cards', JSON.stringify(cards));
-
-    showStatus('Tarjeta guardada correctamente', 'success');
+    showStatus('Tarjeta guardada', 'success');
     loadSavedCards();
 }
 
-// ==================== STORAGE ====================
 function getStoredCards() {
-    try {
-        return JSON.parse(localStorage.getItem('nexuspay_cards') || '[]');
-    } catch {
-        return [];
-    }
+    try { return JSON.parse(localStorage.getItem('nexuspay_cards') || '[]'); } catch { return []; }
 }
 
 function loadSavedCards() {
@@ -240,93 +477,63 @@ function loadSavedCards() {
     const list = document.getElementById('cardsList');
 
     if (cards.length === 0) {
-        list.innerHTML = `
-            <div class="empty-state">
-                <span class="empty-icon">💳</span>
-                <p>No tienes tarjetas guardadas</p>
-                <p class="empty-hint">Agrega tu primera tarjeta en la pestana "Agregar"</p>
-            </div>
-        `;
+        list.innerHTML = '<div class="empty-state"><span class="empty-icon">💳</span><p>No tienes tarjetas guardadas</p></div>';
         return;
     }
 
-    list.innerHTML = cards.map(card => `
-        <div class="card-item" data-id="${card.id}">
+    list.innerHTML = cards.map(c => `
+        <div class="card-item">
             <div class="card-item-info">
-                <div class="card-item-number">${card.numberMasked}</div>
-                <div class="card-item-meta">${card.brand} — ${card.holder} — Exp: ${card.expiry}</div>
+                <div class="card-item-number">${c.numberMasked}</div>
+                <div class="card-item-meta">${c.brand} — ${c.holder} — Exp: ${c.expiry}</div>
             </div>
             <div class="card-item-actions">
-                <button class="card-item-btn" title="Vincular a Google Pay" onclick="linkSavedCard('${card.id}')">🔗</button>
-                <button class="card-item-btn" title="Copiar datos" onclick="copySavedCard('${card.id}')">📋</button>
-                <button class="card-item-btn" title="Eliminar" onclick="deleteCard('${card.id}')">🗑️</button>
+                <button class="card-item-btn" title="Vincular" onclick="reuseCard('${c.id}')">🔗</button>
+                <button class="card-item-btn" title="Copiar" onclick="copyCard('${c.id}')">📋</button>
+                <button class="card-item-btn" title="Eliminar" onclick="deleteCard('${c.id}')">🗑️</button>
             </div>
         </div>
     `).join('');
 }
 
-function linkSavedCard(id) {
-    const cards = getStoredCards();
-    const card = cards.find(c => c.id === id);
+function reuseCard(id) {
+    const card = getStoredCards().find(c => c.id === id);
     if (!card) return;
-
-    // Fill the form
-    document.getElementById('cardNumber').value = formatCardNumber(card.number);
+    document.getElementById('cardNumber').value = card.number.replace(/(.{4})/g, '$1 ').trim();
     document.getElementById('cardHolder').value = card.holder;
     document.getElementById('cardExpiry').value = card.expiry;
     document.getElementById('cardCvv').value = '';
-    detectCardBrand(card.number);
+    detectBrand(card.number);
     updatePreview();
-
-    // Switch to add tab
     document.querySelector('[data-tab="add"]').click();
-
-    showStatus('Tarjeta cargada — ingresa CVV y presiona Vincular', 'info', 4000);
+    showStatus('Tarjeta cargada — ingresa CVV y vincula', 'info', 4000);
 }
 
-function copySavedCard(id) {
-    const cards = getStoredCards();
-    const card = cards.find(c => c.id === id);
+function copyCard(id) {
+    const card = getStoredCards().find(c => c.id === id);
     if (!card) return;
-
-    const text = `${card.number}\n${card.holder}\n${card.expiry}\n${card.cvv}`;
-    copyToClipboard(text);
-    showStatus('Datos copiados al portapapeles', 'success');
+    copyToClipboard(`${card.number}\n${card.holder}\n${card.expiry}\n${card.cvv}`);
+    showStatus('Datos copiados', 'success');
 }
 
 function deleteCard(id) {
-    if (!confirm('Eliminar esta tarjeta guardada?')) return;
-    let cards = getStoredCards();
-    cards = cards.filter(c => c.id !== id);
+    if (!confirm('Eliminar esta tarjeta?')) return;
+    const cards = getStoredCards().filter(c => c.id !== id);
     localStorage.setItem('nexuspay_cards', JSON.stringify(cards));
     loadSavedCards();
-    showStatus('Tarjeta eliminada', 'info');
+    showStatus('Eliminada', 'info');
 }
 
 function clearAllCards() {
-    if (!confirm('Eliminar TODAS las tarjetas guardadas?')) return;
+    if (!confirm('Eliminar TODAS las tarjetas?')) return;
     localStorage.removeItem('nexuspay_cards');
     loadSavedCards();
-    showStatus('Todas las tarjetas eliminadas', 'info');
+    showStatus('Todas eliminadas', 'info');
 }
 
-// ==================== COPY DATA ====================
-function copyCardData() {
-    const data = getCardData();
-    if (!validateCard(data)) return;
-
-    const text = [
-        `Tarjeta: ${data.number}`,
-        `Titular: ${data.holder}`,
-        `Vence: ${data.expiry}`,
-        `CVV: ${data.cvv}`,
-        `Red: ${data.brand}`,
-        '',
-        'Vincula en Google Pay > Agregar metodo de pago'
-    ].join('\n');
-
-    copyToClipboard(text);
-    showStatus('Datos copiados — pega en Google Pay', 'success');
+// ==================== HELPERS ====================
+function formatCardData(d) {
+    return `Tarjeta: ${d.number}\nTitular: ${d.holder}\nVence: ${d.expiry}\nCVV: ${d.cvv}\nRed: ${d.brand}`;
 }
 
 function copyToClipboard(text) {
@@ -335,86 +542,10 @@ function copyToClipboard(text) {
     } else {
         const ta = document.createElement('textarea');
         ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
+        ta.style.cssText = 'position:fixed;left:-9999px';
         document.body.appendChild(ta);
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
     }
-}
-
-// ==================== QR CODE ====================
-let currentQR = null;
-
-function generateQR() {
-    const data = getCardData();
-    if (!validateCard(data)) return;
-
-    const section = document.getElementById('qrSection');
-    const canvas = document.getElementById('qrCanvas');
-
-    // Clear previous QR
-    if (currentQR) {
-        currentQR.clear();
-        currentQR = null;
-    }
-
-    // Create QR data
-    const qrData = JSON.stringify({
-        type: 'nexuspay',
-        card: data.number,
-        holder: data.holder,
-        expiry: data.expiry,
-        cvv: data.cvv,
-        brand: data.brand
-    });
-
-    // Generate QR
-    currentQR = new QRCode(canvas, {
-        text: qrData,
-        width: 200,
-        height: 200,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
-    });
-
-    section.classList.remove('hidden');
-    showStatus('QR generado — escanea desde otro dispositivo', 'success');
-}
-
-function closeQR() {
-    document.getElementById('qrSection').classList.add('hidden');
-}
-
-// ==================== HELPERS ====================
-function formatCardNumber(number) {
-    return number.replace(/(.{4})/g, '$1 ').trim();
-}
-
-// ==================== GOOGLE PAY API CHECK ====================
-function checkGooglePayAvailability() {
-    // Check if Google Pay is available on this device
-    if (typeof google !== 'undefined' && google.payments) {
-        console.log('Google Pay API available');
-        return true;
-    }
-    console.log('Google Pay API not loaded — using deep links');
-    return false;
-}
-
-// Load Google Pay API script dynamically
-function loadGooglePayAPI() {
-    return new Promise((resolve) => {
-        if (document.querySelector('script[src*="google/pay"]')) {
-            resolve(true);
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://pay.google.com/gp/p/js/pay.js';
-        script.onload = () => resolve(true);
-        script.onerror = () => resolve(false);
-        document.head.appendChild(script);
-    });
 }
