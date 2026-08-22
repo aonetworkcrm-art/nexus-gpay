@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>NexusPay v2</title>
+<title>NexusPay</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -11,95 +11,77 @@
 <div id="app">
   <header class="hd">
     <div class="hd-row">
-      <div class="logo">⚡ NexusPay <span class="ver">v2</span></div>
+      <div class="logo">⚡ NexusPay</div>
       <div class="badge" id="envBadge">...</div>
     </div>
   </header>
+
   <div id="sbar" class="sbar hide"><span id="sicon"></span><span id="stxt"></span></div>
 
   <main>
-    <nav class="tabs">
+    <div class="tabs">
       <button class="tab on" data-t="add">💳 Vincular</button>
       <button class="tab" data-t="err">🔧 Errores</button>
-      <button class="tab" data-t="my">📋 Tarjetas</button>
       <button class="tab" data-t="faq">📖 Ayuda</button>
-    </nav>
+    </div>
 
-    <!-- ADD CARD -->
+    <!-- VINCULAR -->
     <div id="t-add" class="pan on">
       <div class="cprev">
         <div class="cchip"></div>
         <div class="cbrand" id="cbrand">VISA</div>
         <div class="cnum" id="cnum">•••• •••• •••• ••••</div>
-        <div class="cfoot">
-          <div><label>TITULAR</label><span id="cholder">TU NOMBRE</span></div>
-          <div><label>VENCE</label><span id="cexp">MM/AA</span></div>
-        </div>
+        <div class="cfoot"><span id="cexp">MM/AA</span></div>
       </div>
+
       <form id="cform" autocomplete="off">
-        <div class="fg"><label>Numero de Tarjeta</label><input type="tel" id="inum" placeholder="1234 5678 9012 3456" maxlength="19" inputmode="numeric"></div>
-        <div class="fg"><label>Nombre del Titular</label><input type="text" id="ihold" placeholder="COMO APARECE EN LA TARJETA"></div>
-        <div class="frow">
-          <div class="fg"><label>Vence</label><input type="tel" id="iexp" placeholder="MM/AA" maxlength="5" inputmode="numeric"></div>
-          <div class="fg"><label>CVV</label><input type="tel" id="icvv" placeholder="123" maxlength="4" inputmode="numeric"></div>
+        <div class="fg">
+          <label>Numero de Tarjeta</label>
+          <input type="tel" id="inum" placeholder="1234 5678 9012 3456" maxlength="19" inputmode="numeric" autocomplete="cc-number">
+        </div>
+        <div class="fg">
+          <label>Vencimiento</label>
+          <input type="tel" id="iexp" placeholder="MM/AA" maxlength="5" inputmode="numeric" autocomplete="cc-exp">
         </div>
       </form>
 
       <div class="mcard m1">
-        <span class="mbadge">METODO 1 — RECOMENDADO</span>
-        <h3>⚡ Abrir Google Pay Nativo</h3>
-        <p>Abre la app de Google Pay directamente</p>
-        <button class="btn bp big" onclick="m1()">⚡ Vincular Ahora</button>
-        <small>Requiere Android + Chrome + Google sesion activa</small>
+        <h3>⚡ Vincular a Google Pay</h3>
+        <p>Abre la app de Google Pay con tu tarjeta</p>
+        <button class="btn bp big" id="btnMain" onclick="m1()">⚡ Vincular Ahora</button>
+        <small>Android + Chrome + Google sesion activa</small>
       </div>
+
       <div class="mcard">
-        <span class="mbadge alt">METODO 2</span>
         <h3>📋 Copiar Datos</h3>
         <p>Copia y pega en Google Pay manualmente</p>
         <div class="mrow">
           <button class="btn bs" onclick="m2a()">📋 Copiar Todo</button>
-          <button class="btn bs" onclick="m2b()">📝 Copiar Formato</button>
+          <button class="btn bs" onclick="m2b()">📝 Solo Numeros</button>
         </div>
       </div>
+
       <div class="mcard">
-        <span class="mbadge alt">METODO 3</span>
-        <h3>📱 QR Code</h3>
-        <p>Genera QR para escanear</p>
-        <button class="btn bs" onclick="m3()">📱 Generar QR</button>
-      </div>
-      <div class="mcard">
-        <span class="mbadge alt">METODO 4</span>
-        <h3>🌐 Abrir Google Pay Web</h3>
-        <p>Abre pay.google.com</p>
+        <h3>🌐 Google Pay Web</h3>
+        <p>Abre pay.google.com para agregar tarjeta</p>
         <div class="mrow">
           <button class="btn bo" onclick="m4a()">🌐 pay.google.com</button>
           <button class="btn bo" onclick="m4b()">📱 Google Wallet</button>
         </div>
       </div>
-      <div class="mcard">
-        <span class="mbadge alt">METODO 5</span>
-        <h3>📲 Link Compartible</h3>
-        <p>Genera link para WhatsApp/SMS</p>
-        <button class="btn bo" onclick="m5()">📲 Generar Link</button>
-      </div>
-      <div id="qrBox" class="qrbox hide"><h3>📱 Escanea este QR</h3><div id="qrC"></div><button class="btn bo sm" onclick="el('qrBox').classList.add('hide')">Cerrar</button></div>
-      <div id="lnkBox" class="qrbox hide"><h3>🔗 Link Generado</h3><div class="lnk" id="lnkTxt"></div><button class="btn bs sm" onclick="cp(el('lnkTxt').textContent)">📋 Copiar Link</button> <button class="btn bo sm" onclick="el('lnkBox').classList.add('hide')">Cerrar</button></div>
-      <div class="save"><button class="btn ba" onclick="saveCard()">💾 Guardar Tarjeta</button></div>
     </div>
 
-    <!-- ERRORS -->
+    <!-- ERRORES -->
     <div id="t-err" class="pan">
-      <h2 class="stitle">🔧 Centro de Errores Google Pay</h2>
-      <p class="sdesc">Toca el error que ves para obtener la solucion</p>
+      <h2 class="stitle">🔧 Errores Google Pay</h2>
+      <p class="sdesc">Toca el error para ver la solucion</p>
       <div class="egrid">
-        <div class="ecard" onclick="esol('ca')"><div class="ecode">❌ Comun</div><h3>"Esta tarjeta no se puede agregar"</h3><p>This card can't be added</p><span class="etap">Toca para soluciones →</span></div>
-        <div class="ecard" onclick="esol('sw')"><div class="ecode">⚠️ Temporal</div><h3>"Algo salio mal"</h3><p>Something went wrong</p><span class="etap">Toca para soluciones →</span></div>
-        <div class="ecard" onclick="esol('aa')"><div class="ecode">🔁 Duplicado</div><h3>"Ya esta agregada"</h3><p>This card has already been added</p><span class="etap">Toca para soluciones →</span></div>
-        <div class="ecard" onclick="esol('ns')"><div class="ecode">🏦 Emisor</div><h3>"Banco no compatible"</h3><p>Your issuer doesn't support Google Pay</p><span class="etap">Toca para soluciones →</span></div>
-        <div class="ecard" onclick="esol('vf')"><div class="ecode">🔐 Verificacion</div><h3>"Fallo la verificacion"</h3><p>We couldn't verify your card</p><span class="etap">Toca para soluciones →</span></div>
-        <div class="ecard" onclick="esol('rg')"><div class="ecode">🌍 Region</div><h3>"No disponible en tu region"</h3><p>Google Pay isn't available here</p><span class="etap">Toca para soluciones →</span></div>
-        <div class="ecard" onclick="esol('ct')"><div class="ecode">💳 Tipo</div><h3>"Tipo no soportado"</h3><p>This card type is not supported</p><span class="etap">Toca para soluciones →</span></div>
-        <div class="ecard" onclick="esol('ou')"><div class="ecode">📱 App</div><h3>"Actualiza Google Pay"</h3><p>Please update to latest version</p><span class="etap">Toca para soluciones →</span></div>
+        <div class="ecard" onclick="esol('ca')"><div class="ecode">❌ Comun</div><h3>"No se puede agregar"</h3><p>This card can't be added</p><span class="etap">Soluciones →</span></div>
+        <div class="ecard" onclick="esol('sw')"><div class="ecode">⚠️ Temporal</div><h3>"Algo salio mal"</h3><p>Something went wrong</p><span class="etap">Soluciones →</span></div>
+        <div class="ecard" onclick="esol('aa')"><div class="ecode">🔁 Duplicado</div><h3>"Ya esta agregada"</h3><p>Card already added</p><span class="etap">Soluciones →</span></div>
+        <div class="ecard" onclick="esol('ns')"><div class="ecode">🏦 Emisor</div><h3>"Banco no compatible"</h3><p>Issuer doesn't support</p><span class="etap">Soluciones →</span></div>
+        <div class="ecard" onclick="esol('vf')"><div class="ecode">🔐 Verificacion</div><h3>"Fallo verificacion"</h3><p>Couldn't verify card</p><span class="etap">Soluciones →</span></div>
+        <div class="ecard" onclick="esol('rg')"><div class="ecode">🌍 Region</div><h3>"Region no soportada"</h3><p>Not available in region</p><span class="etap">Soluciones →</span></div>
       </div>
       <div id="solPan" class="solpan hide">
         <div class="solhd"><h3 id="solT"></h3><button class="bclose" onclick="el('solPan').classList.add('hide')">✕</button></div>
@@ -107,27 +89,23 @@
       </div>
     </div>
 
-    <!-- MY CARDS -->
-    <div id="t-my" class="pan">
-      <div class="cards-hd"><h2>Mis Tarjetas</h2><button class="btn bd sm" onclick="clearCards()">🗑️ Limpiar</button></div>
-      <div id="cardsL" class="cards-l"><div class="empty"><span>💳</span><p>No tienes tarjetas guardadas</p></div></div>
-    </div>
-
-    <!-- HELP -->
+    <!-- AYUDA -->
     <div id="t-faq" class="pan">
-      <h2>📖 Ayuda NexusPay v2</h2>
-      <div class="hs"><h3>🎯 Que es?</h3><p>Herramienta para <strong>vincular tarjetas a Google Pay</strong> cuando la app falla. 5 metodos diferentes para que SIEMPRE puedas vincular.</p></div>
-      <div class="hs"><h3>🔗 Los 5 Metodos</h3>
-        <ol><li><strong>Deep Link</strong> — Abre Google Pay nativo en Android</li><li><strong>Copia</strong> — Copia datos y pegalos en Google Pay</li><li><strong>QR</strong> — Genera QR para escanear</li><li><strong>URL Directa</strong> — Abre pay.google.com</li><li><strong>Link</strong> — Genera link compartible</li></ol>
+      <h2>📖 Ayuda</h2>
+      <div class="hs"><h3>🎯 Que es?</h3><p>Herramienta para <strong>vincular tarjetas a Google Pay</strong> cuando la app falla.</p></div>
+      <div class="hs"><h3>🔗 Como usar</h3>
+        <ol><li>Ingresa numero y vencimiento</li><li>Presiona "Vincular Ahora"</li><li>Google Pay se abre con tu tarjeta</li><li>Confirma y listo</li></ol>
       </div>
-      <div class="hs"><h3>🔧 Solucion de Errores</h3><p>Ve a la pestana <strong>"Errores"</strong> para soluciones de cada tipo de error comun de Google Pay.</p></div>
-      <div class="hs"><h3>⚡ Tips Anti-Error</h3>
-        <ol><li>Usa <strong>Chrome</strong> — no otros navegadores</li><li>Verifica <strong>Google sesion</strong> activa</li><li>Actualiza <strong>Google Pay</strong></li><li>Espera <strong>5 minutos</strong> entre intentos</li><li>Si uno falla, <strong>usa otro metodo</strong></li><li>Limpia <strong>cache de Chrome</strong></li></ol>
+      <div class="hs"><h3>🔧 Si falla</h3>
+        <ol><li>Ve a pestana "Errores"</li><li>Busca el error que ves</li><li>Sigue la solucion paso a paso</li><li>Si uno no funciona, prueba otro metodo</li></ol>
       </div>
-      <div class="hs"><h3>🔐 Seguridad</h3><ul><li>✅ 100% local — sin servidores</li><li>✅ Datos solo en tu navegador</li><li>✅ HTTPS automatico</li><li>✅ Sin registro</li></ul></div>
+      <div class="hs"><h3>⚡ Tips</h3>
+        <ol><li>Usa <strong>Chrome</strong> en Android</li><li>Ten tu <strong>Google sesion</strong> activa</li><li>Actualiza <strong>Google Pay</strong></li><li>Espera <strong>5 min</strong> entre intentos</li></ol>
+      </div>
     </div>
   </main>
-  <footer class="ft"><p>NexusPay v2 — Motor Anti-Errores</p><p>🔒 100% local</p></footer>
+
+  <footer class="ft"><p>NexusPay — 100% local, sin servidores</p></footer>
 </div>
 <script src="app.js"></script>
 </body>
