@@ -1,0 +1,73 @@
+⚡ NEXUSPAY — Guia Rapida
+==========================
+
+QUE ES?
+-------
+NexusPay es una herramienta que automatiza el proceso de agregar
+tarjetas a Google Pay. Solo pones tu tarjeta y el agente hace todo.
+
+
+REQUISITOS
+----------
+- Windows 10/11
+- Python 3.8+ (descargar desde python.org)
+- Chrome instalado
+
+
+INSTALACION (1 vez sola)
+-------------------------
+1. Descarga esta carpeta
+2. Haz doble click en "INSTALAR.bat"
+3. Espera a que instale todo (2-3 minutos)
+4. Listo!
+
+
+USO
+---
+1. Haz doble click en "INICIAR.bat"
+2. Abre http://localhost:5050 en tu navegador
+3. Pon tu numero de tarjeta y vencimiento
+4. Presiona "Vincular Automaticamente"
+5. Se abre Chrome y el agente hace todo solo
+6. Si te pide codigo SMS, ingresa en el navegador
+
+
+DESDE CELULAR (mismo WiFi)
+---------------------------
+1. Ejecuta "INICIAR.bat" en la PC
+2. En el celular, abre Chrome
+3. Escribe: http://TU_IP_PC:5050
+4. Usa el panel normalmente
+
+
+ARCHIVOS
+--------
+- INSTALAR.bat    — Instala todo automaticamente
+- INICIAR.bat     — Inicia el servidor
+- server.py       — El servidor principal
+- COMO_USAR.txt   — Esta guia
+
+
+SOLUCION DE PROBLEMAS
+---------------------
+"Python no encontrado"
+  -> Descarga desde python.org y marca "Add to PATH"
+
+"Error al instalar playwright"
+  -> Ejecuta: pip install playwright && playwright install chromium
+
+"No abre el navegador"
+  -> Verifica que Chrome este instalado
+
+"Error de conexion"
+  -> Verifica que el servidor este corriendo (ventana negra abierta)
+
+
+SOPORTE
+-------
+Si tienes problemas, ejecuta:
+  python server.py
+Y revisa los mensajes de error en la consola.
+
+
+NexusPay v1.0 — 100% local, sin servidores, sin internet necesaria
