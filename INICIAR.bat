@@ -1,13 +1,17 @@
 @echo off
-echo ========================================
-echo   ⚡ NexusPay — Iniciando servidor
-echo ========================================
+title ⚡ NexusPay
+color 0B
 echo.
-echo Abre en tu navegador: http://localhost:5050
+echo  ╔══════════════════════════════════════╗
+echo  ║   ⚡ NexusPay — Ejecutando           ║
+echo  ╚══════════════════════════════════════╝
 echo.
-echo Para celular (mismo WiFi): http://TU_IP:5050
+echo  Abre en tu navegador: http://localhost:5050
 echo.
-echo Presiona Ctrl+C para detener
-echo ========================================
+echo  Primera vez: inicia sesion en Google (se guarda)
+echo  Siguientes veces: ya esta logueado
+echo.
+echo  Presiona Ctrl+C para detener
+echo  ─────────────────────────────────────
 echo.
 python server.py

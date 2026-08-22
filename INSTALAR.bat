@@ -1,51 +1,66 @@
 @echo off
-echo ========================================
-echo   ⚡ NexusPay — Instalador Automatico
-echo ========================================
+title ⚡ NexusPay — Instalador
+color 0B
+echo.
+echo  ╔══════════════════════════════════════╗
+echo  ║   ⚡ NexusPay — Instalador          ║
+echo  ║   Automatiza Google Pay desde tu PC  ║
+echo  ╚══════════════════════════════════════╝
 echo.
 
 REM Check Python
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Python no encontrado
+    echo [!] Python no encontrado
     echo.
-    echo Descarga Python desde: https://www.python.org/downloads/
-    echo IMPORTANTE: Marca "Add Python to PATH" durante la instalacion
+    echo [1] Descarga Python desde: https://www.python.org/downloads/
+    echo [2] Durante la instalacion marca: "Add Python to PATH"
+    echo [3] Despues de instalar, vuelve a ejecutar ESTE archivo
     echo.
+    start https://www.python.org/downloads/
     pause
     exit /b 1
 )
 
-echo ✅ Python encontrado
+echo [OK] Python encontrado
+echo.
+echo Instalando dependencias (tarda 1-2 minutos)...
 echo.
 
-REM Install dependencies
-echo Instalando dependencias...
-pip install flask playwright --quiet
+pip install flask -q 2>nul
 if errorlevel 1 (
-    echo Error instalando dependencias
+    echo [!] Error instalando flask
     pause
     exit /b 1
 )
+echo [OK] Flask instalado
 
-echo Instalando navegador Chromium...
-playwright install chromium
+pip install playwright -q 2>nul
 if errorlevel 1 (
-    echo Error instalando Chromium
+    echo [!] Error instalando playwright
     pause
     exit /b 1
 )
+echo [OK] Playwright instalado
 
 echo.
-echo ✅ Todo instalado correctamente
-echo.
-echo ========================================
-echo   Para ejecutar NexusPay:
-echo   python server.py
-echo.
-echo   Luego abre: http://localhost:5050
-echo ========================================
-echo.
+echo Instalando navegador Chromium (tarda 1-2 minutos)...
+playwright install chromium 2>nul
+if errorlevel 1 (
+    echo [!] Error instalando Chromium
+    pause
+    exit /b 1
+)
+echo [OK] Chromium instalado
 
-REM Run the server
-python server.py
+echo.
+echo ╔══════════════════════════════════════╗
+echo ║   ✅ INSTALACION COMPLETADA          ║
+echo ╚══════════════════════════════════════╝
+echo.
+echo Para usar NexusPay:
+echo   1. Haz doble click en "INICIAR.bat"
+echo   2. Abre http://localhost:5050 en tu navegador
+echo   3. ¡Listo!
+echo.
+pause

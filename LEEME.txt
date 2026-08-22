@@ -1,0 +1,110 @@
+⚡ NEXUSPAY — Guia de Uso
+==========================
+
+QUE ES?
+-------
+NexusPay automatiza el proceso de agregar tarjetas de credito/debito
+a Google Pay. Solo pones los datos y el agente hace todo solo.
+
+
+REQUISITOS
+----------
+- Windows 10 o 11
+- Internet (para instalar dependencias)
+
+
+INSTALACION (solo 1 vez)
+-------------------------
+1. Haz doble click en "INSTALAR.bat"
+2. Si pide permisos de administrador, dale que si
+3. Espera 2-3 minutos (instala todo automaticamente)
+4. Cuando diga "INSTALACION COMPLETADA", presiona una tecla
+
+
+USO
+---
+1. Haz doble click en "INICIAR.bat"
+2. Abre tu navegador y ve a: http://localhost:5050
+3. Pon tu numero de tarjeta (se formatea solo)
+4. Pon tu vencimiento (MM/AA)
+5. Presiona "⚡ Vincular a Google Pay"
+6. Se abre Chrome — PRIMERA VEZ: inicia sesion en Google
+7. Despues de la sesion, el agente hace TODO solo
+8. Revisa Google Pay desde tu celular para confirmar
+
+
+PRIMERA VEZ vs SIGUIENTES VECES
+---------------------------------
+Primera vez:
+  - Se abre Chrome y pide iniciar sesion en Google
+  - Tu inicias sesion normalmente
+  - La sesion se GUARDA para siempre
+
+Siguientes veces:
+  - Chrome ya esta logueado
+  - El agente hace todo en 30 segundos
+  - No necesitas hacer nada mas
+
+
+QUE HACE EL AGENTE?
+--------------------
+1. Abre Chrome con tu sesion de Google
+2. Navega a Google Wallet (Google Pay)
+3. Busca el boton de "Agregar metodo de pago"
+4. Click en el boton
+5. Llena tu numero de tarjeta
+6. Llena tu vencimiento
+7. Confirma
+8. Si pide codigo SMS, lo ingresas en Chrome
+9. ¡LISTO! Tu tarjeta queda vinculada
+
+
+DESDE CELULAR (mismo WiFi)
+---------------------------
+1. Ejecuta "INICIAR.bat" en la PC
+2. En el celular, abre Chrome
+3. Escribe: http://TU_IP_PC:5050
+4. Usa el panel normalmente
+5. El agente corre en la PC, no en el celular
+
+
+ARCHIVOS
+--------
+  INSTALAR.bat  — Instala todo (ejecutar 1 vez)
+  INICIAR.bat   — Inicia NexusPay
+  server.py     — El servidor/agente
+  agent.py      — CLI alternativo
+  LEEME.txt     — Esta guia
+
+
+SOLUCION DE PROBLEMAS
+---------------------
+
+"No aparece el boton de agregar"
+  -> Asegurate de tener tu cuenta de Google activa
+  -> El agente busca multiples selectores, si no encuentra
+     toma screenshot en debug.png
+
+"Error de conexion"
+  -> Verifica que el servidor este corriendo (ventana negra)
+  -> Verifica que no tengas otro programa en el puerto 5050
+
+"Chrome no abre"
+  -> Verifica que Chrome este instalado
+  -> Ejecuta INSTALAR.bat de nuevo
+
+"Error de Python"
+  -> Descarga Python desde python.org
+  -> MARCA "Add Python to PATH" durante instalacion
+  -> Ejecuta INSTALAR.bat de nuevo
+
+
+NOTA IMPORTANTE
+---------------
+- NexusPay NO almacena tus tarjetas en ningun servidor
+- Todo corre LOCALMENTE en tu computadora
+- Tus datos NUNCA salen de tu PC
+- 100% seguro y privado
+
+
+NexusPay v5.0
