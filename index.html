@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NexusPay — Vincular Tarjeta a Google Pay</title>
+    <meta name="description" content="Herramienta para vincular tarjetas de credito/debito a Google Pay de forma rapida y segura">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">⚡</span>
+                    <span class="logo-text">NexusPay</span>
+                </div>
+                <div class="header-badge">Google Pay Linker</div>
+            </div>
+        </header>
+
+        <!-- Status Bar -->
+        <div id="statusBar" class="status-bar hidden">
+            <span id="statusIcon">✓</span>
+            <span id="statusText">Listo</span>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="add">
+                    <span class="tab-icon">💳</span>
+                    <span>Agregar</span>
+                </button>
+                <button class="tab-btn" data-tab="cards">
+                    <span class="tab-icon">📋</span>
+                    <span>Mis Tarjetas</span>
+                </button>
+                <button class="tab-btn" data-tab="help">
+                    <span class="tab-icon">📖</span>
+                    <span>Ayuda</span>
+                </button>
+            </div>
+
+            <!-- Tab: Add Card -->
+            <div id="tab-add" class="tab-content active">
+                <!-- Visual Card Preview -->
+                <div class="card-preview" id="cardPreview">
+                    <div class="card-brand" id="cardBrand">VISA</div>
+                    <div class="card-number" id="previewNumber">•••• •••• •••• ••••</div>
+                    <div class="card-details">
+                        <div class="card-detail">
+                            <label>TITULAR</label>
+                            <span id="previewHolder">TU NOMBRE</span>
+                        </div>
+                        <div class="card-detail">
+                            <label>VENCE</label>
+                            <span id="previewExpiry">MM/AA</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Input Form -->
+                <form id="cardForm" class="card-form">
+                    <div class="form-group">
+                        <label for="cardNumber">Numero de Tarjeta</label>
+                        <input type="tel" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" autocomplete="cc-number" inputmode="numeric">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cardHolder">Nombre del Titular</label>
+                        <input type="text" id="cardHolder" placeholder="Como aparece en la tarjeta" autocomplete="cc-name" text-transform="uppercase">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cardExpiry">Vencimiento</label>
+                            <input type="tel" id="cardExpiry" placeholder="MM/AA" maxlength="5" autocomplete="cc-exp" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label for="cardCvv">CVV</label>
+                            <input type="tel" id="cardCvv" placeholder="123" maxlength="4" autocomplete="cc-csc" inputmode="numeric">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-primary" id="btnLinkGPay" onclick="linkToGPay()">
+                            <span class="btn-icon">🔗</span>
+                            Vincular a Google Pay
+                        </button>
+
+                        <button type="button" class="btn btn-secondary" id="btnSaveCard" onclick="saveCard()">
+                            <span class="btn-icon">💾</span>
+                            Guardar Tarjeta
+                        </button>
+
+                        <button type="button" class="btn btn-outline" id="btnCopyData" onclick="copyCardData()">
+                            <span class="btn-icon">📋</span>
+                            Copiar Datos
+                        </button>
+
+                        <button type="button" class="btn btn-outline" id="btnGenerateQR" onclick="generateQR()">
+                            <span class="btn-icon">📱</span>
+                            Generar QR
+                        </button>
+                    </div>
+                </form>
+
+                <!-- QR Display -->
+                <div id="qrSection" class="qr-section hidden">
+                    <div class="qr-header">
+                        <h3>Escanea desde tu celular</h3>
+                        <p>Abre Google Pay en tu telefono y escanea</p>
+                    </div>
+                    <canvas id="qrCanvas"></canvas>
+                    <button class="btn btn-sm btn-outline" onclick="closeQR()">Cerrar</button>
+                </div>
+            </div>
+
+            <!-- Tab: My Cards -->
+            <div id="tab-cards" class="tab-content">
+                <div class="cards-header">
+                    <h2>Mis Tarjetas Guardadas</h2>
+                    <button class="btn btn-sm btn-outline" onclick="clearAllCards()">🗑️ Limpiar Todo</button>
+                </div>
+                <div id="cardsList" class="cards-list">
+                    <div class="empty-state">
+                        <span class="empty-icon">💳</span>
+                        <p>No tienes tarjetas guardadas</p>
+                        <p class="empty-hint">Agrega tu primera tarjeta en la pestana "Agregar"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Help -->
+            <div id="tab-help" class="tab-content">
+                <div class="help-content">
+                    <h2>📖 Como Usar NexusPay</h2>
+
+                    <div class="help-section">
+                        <h3>🎯 Que hace esta herramienta?</h3>
+                        <p>NexusPay te ayuda a <strong>vincular tus tarjetas de credito o debito a Google Pay</strong> de forma rapida. Funciona cuando Google Pay no te deja agregar tarjetas directamente.</p>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>📱 Paso a Paso</h3>
+                        <ol class="help-steps">
+                            <li><strong>Abre esta pagina en tu celular</strong> con el navegador Chrome</li>
+                            <li><strong>Asegurate de tener tu cuenta de Google</strong> iniciada sesion en Chrome</li>
+                            <li><strong>Ingresa los datos</strong> de tu tarjeta en el formulario</li>
+                            <li><strong>Presiona "Vincular a Google Pay"</strong></li>
+                            <li><strong>Se abrira Google Pay</strong> con tu tarjeta pre-cargada</li>
+                            <li><strong>Confirma</strong> y listo! Tu tarjeta estara vinculada</li>
+                        </ol>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>💡 Tips Importantes</h3>
+                        <ul class="help-list">
+                            <li>Siempre abre desde el <strong>celular</strong> con Chrome y tu Google sesion activa</li>
+                            <li>Los datos de la tarjeta <strong>nunca se envian a ningun servidor</strong> — todo queda en tu navegador</li>
+                            <li>Puedes guardar tarjetas para re-vincularlas rapido despues</li>
+                            <li>Si Google Pay no abre, intenta copiar los datos e ingresarlos manualmente en Google Pay</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>🔐 Seguridad</h3>
+                        <ul class="help-list">
+                            <li>✅ Todo el proceso es <strong>local en tu navegador</strong></li>
+                            <li>✅ No guardamos tus datos en servidores</li>
+                            <li>✅ Usa la API oficial de Google Pay</li>
+                            <li>✅ HTTPS en todo momento</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>❓ Que pasa si Google Pay no funciona?</h3>
+                        <ol class="help-steps">
+                            <li><strong>Verifica</strong> que tienes Chrome y tu Google sesion activa</li>
+                            <li><strong>Usa "Copiar Datos"</strong> para copiar la info al portapapeles</li>
+                            <li><strong>Abre Google Pay manualmente</strong> desde tu celular</li>
+                            <li><strong>Ve a "Agregar metodo de pago"</strong> y pega los datos</li>
+                            <li><strong>Genera un QR</strong> para escanear desde otro dispositivo si necesitas</li>
+                        </ol>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>🛠️ Metodos Alternativos</h3>
+                        <div class="alt-methods">
+                            <div class="alt-method">
+                                <h4>Deep Link Directo</h4>
+                                <p>El boton "Vincular a Google Pay" usa el deep link oficial de Google para abrir directamente el flujo de agregar tarjeta.</p>
+                            </div>
+                            <div class="alt-method">
+                                <h4>Copia Manual</h4>
+                                <p>Si el deep link no funciona, copia los datos y pegalos directamente en Google Pay > Agregar metodo de pago.</p>
+                            </div>
+                            <div class="alt-method">
+                                <h4>QR Code</h4>
+                                <p>Genera un QR con los datos de la tarjeta para escanear desde otro dispositivo.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>NexusPay v1.0 — Herramienta personal de vinculacion</p>
+            <p class="footer-security">🔒 Datos procesados 100% localmente</p>
+        </footer>
+    </div>
+
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
