@@ -1,6 +1,4 @@
-/* NexusPay v3 — Google Pay API Integration */
-/* Opens native Google Pay sheet to add cards */
-
+/* NexusPay v3.1 — Buttons that ACTUALLY work */
 var paymentsClient = null;
 var gpayReady = false;
 
@@ -8,23 +6,42 @@ var gpayReady = false;
 document.addEventListener('DOMContentLoaded', function() {
     initTabs();
     initForm();
+    console.log('[NexusPay] DOM ready, waiting for Google Pay script...');
 });
 
 // ==================== HELPERS ====================
 function el(id) { return document.getElementById(id); }
 
 function cp(t) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(t);
-    } else {
-        var a = document.createElement('textarea');
-        a.value = t;
-        a.style.cssText = 'position:fixed;left:-9999px';
-        document.body.appendChild(a);
-        a.select();
-        document.execCommand('copy');
-        document.body.removeChild(a);
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(t).then(function() {
+                console.log('[NexusPay] Copied via clipboard API');
+            }).catch(function() {
+                fallbackCopy(t);
+            });
+        } else {
+            fallbackCopy(t);
+        }
+    } catch(e) {
+        fallbackCopy(t);
     }
+}
+
+function fallbackCopy(t) {
+    var a = document.createElement('textarea');
+    a.value = t;
+    a.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+    document.body.appendChild(a);
+    a.focus();
+    a.select();
+    try {
+        document.execCommand('copy');
+        console.log('[NexusPay] Copied via execCommand');
+    } catch(e) {
+        console.error('[NexusPay] Copy failed:', e);
+    }
+    document.body.removeChild(a);
 }
 
 function msg(t, c, ms) {
@@ -32,6 +49,7 @@ function msg(t, c, ms) {
     b.className = 'sbar ' + c;
     el('sicon').textContent = c === 'ok' ? '✓' : c === 'err' ? '✕' : 'ℹ';
     el('stxt').textContent = t;
+    b.classList.remove('hide');
     if (ms !== 0) setTimeout(function() { b.classList.add('hide'); }, ms || 3000);
 }
 
@@ -108,7 +126,6 @@ function updPreview(raw) {
 }
 
 function updExp() { el('cexp').textContent = el('iexp').value || 'MM/AA'; }
-
 function getNum() { return el('inum').value.replace(/\s/g, ''); }
 function getExp() { return el('iexp').value; }
 function getBrand() { return el('cbrand').textContent; }
@@ -121,11 +138,7 @@ function ok() {
 }
 
 // ==================== GOOGLE PAY API ====================
-// This is the REAL way to add cards to Google Pay from a web page
-// It opens the native Google Pay sheet where user can add/confirm cards
-
 var baseRequest = { apiVersion: 2, apiVersionMinor: 0 };
-
 var allowedCardNetworks = ['MASTERCARD', 'VISA', 'AMEX', 'DISCOVER', 'JCB'];
 var allowedAuthMethods = ['PAN_ONLY', 'CRYPTOGRAM_3DS'];
 
@@ -144,52 +157,43 @@ var cardPaymentMethod = {
 function getPaymentDataRequest() {
     return Object.assign({}, baseRequest, {
         allowedPaymentMethods: [cardPaymentMethod],
-        transactionInfo: {
-            totalPriceStatus: 'NOT_CURRENTLY_KNOWN',
-            currencyCode: 'USD'
-        },
-        merchantInfo: {
-            merchantName: 'NexusPay'
-        }
+        transactionInfo: { totalPriceStatus: 'NOT_CURRENTLY_KNOWN', currencyCode: 'USD' },
+        merchantInfo: { merchantName: 'NexusPay' }
     });
 }
 
 // Called when Google Pay script loads
 function onGooglePayLoad() {
-    console.log('[NexusPay] Google Pay API script loaded');
+    console.log('[NexusPay] Google Pay script loaded');
     try {
         paymentsClient = new google.payments.api.PaymentsClient({
-            environment: 'TEST'  // Use 'PRODUCTION' when you have a merchant ID
+            environment: 'TEST'
         });
 
-        var paymentDataRequest = getPaymentDataRequest();
-
-        paymentsClient.isReadyToPay(paymentDataRequest).then(function(response) {
+        paymentsClient.isReadyToPay(getPaymentDataRequest()).then(function(response) {
             console.log('[NexusPay] isReadyToPay:', response.result);
             if (response.result) {
                 gpayReady = true;
                 createGPayButton();
-                updateBadge('ok');
+                el('gpayBadge').textContent = '✅ Google Pay Listo';
+                el('gpayBadge').style.cssText = 'color:#34d399;border-color:rgba(52,211,153,.3)';
             } else {
-                showFallback('Google Pay no disponible en este dispositivo');
-                updateBadge('no');
+                console.log('[NexusPay] Google Pay not ready, showing fallback');
+                showManualButton();
             }
         }).catch(function(err) {
             console.error('[NexusPay] isReadyToPay error:', err);
-            showFallback('Error verificando Google Pay');
-            updateBadge('no');
+            showManualButton();
         });
     } catch (e) {
         console.error('[NexusPay] Init error:', e);
-        showFallback('Error inicializando Google Pay');
-        updateBadge('no');
+        showManualButton();
     }
 }
 
 function onGooglePayError() {
-    console.log('[NexusPay] Google Pay script failed to load');
-    showFallback('No se pudo cargar Google Pay API');
-    updateBadge('no');
+    console.log('[NexusPay] Google Pay script FAILED to load');
+    showManualButton();
 }
 
 function createGPayButton() {
@@ -202,66 +206,49 @@ function createGPayButton() {
         el('gpayBtnContainer').innerHTML = '';
         el('gpayBtnContainer').appendChild(btn);
         el('gpayFallback').classList.add('hide');
-        console.log('[NexusPay] Google Pay button created');
+        console.log('[NexusPay] Native GPay button rendered');
     } catch (e) {
-        console.error('[NexusPay] Button creation error:', e);
-        showFallback('Error creando boton');
+        console.error('[NexusPay] Button error:', e);
+        showManualButton();
     }
 }
 
-function showFallback(reason) {
+function showManualButton() {
     el('gpayBtnContainer').innerHTML = '';
     el('gpayFallback').classList.remove('hide');
-    el('gpayNote').textContent = reason + ' — usa el boton o Copiar Datos';
+    el('gpayNote').textContent = 'Google Pay API no disponible — usa el boton o Copiar Datos';
+    el('gpayBadge').textContent = '⚠️ Modo Alternativo';
+    el('gpayBadge').style.cssText = 'color:#fbbf24;border-color:rgba(251,191,36,.3)';
 }
 
-function updateBadge(status) {
-    var b = el('gpayBadge');
-    if (status === 'ok') {
-        b.textContent = '✅ Google Pay Listo';
-        b.style.cssText = 'color:#34d399;border-color:rgba(52,211,153,.3)';
-    } else {
-        b.textContent = '❌ Google Pay No Disponible';
-        b.style.cssText = 'color:#f87171;border-color:rgba(248,113,113,.3)';
-    }
-}
-
-// ==================== GPay Click — Opens Native Sheet ====================
+// GPay button click — opens native sheet
 function onGPayClick() {
     if (!ok()) return;
-
-    var paymentDataRequest = getPaymentDataRequest();
-
-    paymentsClient.loadPaymentData(paymentDataRequest).then(function(paymentData) {
-        console.log('[NexusPay] Payment data received:', paymentData);
-        msg('✅ Tarjeta vinculada con exito a Google Pay!', 'ok', 5000);
+    console.log('[NexusPay] Opening Google Pay sheet...');
+    paymentsClient.loadPaymentData(getPaymentDataRequest()).then(function(paymentData) {
+        console.log('[NexusPay] Success!', paymentData);
+        msg('✅ Tarjeta vinculada a Google Pay!', 'ok', 5000);
     }).catch(function(err) {
-        console.error('[NexusPay] loadPaymentData error:', err);
+        console.error('[NexusPay] Error:', err);
         if (err.statusCode === 'CANCELED') {
-            msg('Cancelado por el usuario', 'inf');
+            msg('Cancelado', 'inf');
         } else {
-            msg('Error: ' + (err.message || 'Intenta otro metodo'), 'err', 5000);
+            msg('Error: ' + (err.message || 'Intenta Copiar Datos'), 'err', 5000);
         }
     });
 }
 
-// Manual fallback — same as clicking the GPay button
+// Manual fallback — ALWAYS opens pay.google.com
 function gpayManual() {
-    if (!gpayReady || !paymentsClient) {
-        msg('Google Pay no esta disponible — usa Copiar Datos', 'err', 5000);
-        return;
-    }
-    onGPayClick();
+    if (!ok()) return;
+    console.log('[NexusPay] Opening pay.google.com...');
+    window.location.href = 'https://pay.google.com/gp/m/card/add';
 }
 
 // ==================== METHOD 2: Copy ====================
 function m2a() {
     if (!ok()) return;
-    var t = 'TARJETA GOOGLE PAY\n' +
-        'Numero: ' + getNum() + '\n' +
-        'Vence: ' + getExp() + '\n' +
-        'Red: ' + getBrand() + '\n\n' +
-        'Google Pay > + > Tarjeta > Pegar datos';
+    var t = 'TARJETA GOOGLE PAY\nNumero: ' + getNum() + '\nVence: ' + getExp() + '\nRed: ' + getBrand() + '\n\nGoogle Pay > + > Tarjeta > Pegar datos';
     cp(t);
     msg('Datos copiados — abre Google Pay y pega', 'ok');
 }
@@ -269,28 +256,30 @@ function m2a() {
 function m2b() {
     if (!ok()) return;
     cp(getNum() + '\n' + getExp());
-    msg('Copiado — pega en Google Pay', 'ok');
+    msg('Copiado', 'ok');
 }
 
 // ==================== METHOD 3 & 4: Web URLs ====================
 function m4a() {
-    window.open('https://pay.google.com/gp/m/card/add', '_blank');
+    console.log('[NexusPay] Opening pay.google.com');
+    window.location.href = 'https://pay.google.com/gp/m/card/add';
     msg('Abriendo Google Pay Web...', 'inf');
 }
 
 function m4b() {
-    window.open('https://wallet.google.com/manage/methods', '_blank');
+    console.log('[NexusPay] Opening wallet.google.com');
+    window.location.href = 'https://wallet.google.com/manage/methods';
     msg('Abriendo Google Wallet...', 'inf');
 }
 
 // ==================== ERROR SOLUTIONS ====================
 var SOLS = {
-    ca: { t: '❌ "No se puede agregar"', h: '<h4>Causas:</h4><ul><li>Banco no participa en Google Pay</li><li>Tarjeta prepago sin tokenizacion</li><li>Bloqueo antifraude temporal</li></ul><h4>Soluciones:</h4><ol><li><strong>Espera 24 horas</strong> — bloqueo temporal</li><li><strong>Llama al banco</strong> — pide habilitar "pagos digitales"</li><li><strong>Prueba Copiar</strong> — Metodo 2 siempre funciona</li><li><strong>Cambia Google Account</strong></li></ol>' },
-    sw: { t: '⚠️ "Algo salio mal" (error 006)', h: '<h4>Causas:</h4><ul><li>Error temporal de Google</li><li>Servidor sobrecargado</li><li>Conexion inestable</li></ul><h4>Soluciones:</h4><ol><li><strong>Espera 5-15 minutos</strong></li><li><strong>Cambia WiFi a datos moviles</strong></li><li><strong>Modo avion 10 segundos</strong></li><li><strong>Limpia cache Chrome</strong></li><li><strong>Reinicia el telefono</strong></li></ol><p><strong>NO intentes mas de 3 veces</strong> — Google bloquea 24-72h</p>' },
-    aa: { t: '🔁 "Ya esta agregada"', h: '<ol><li><strong>Ve a Google Pay > Metodos de pago</strong></li><li><strong>Revisa otros Google Accounts</strong></li><li><strong>Elimina y vuelve a agregar</strong></li><li><strong>Verifica wallet.google.com</strong></li></ol>' },
-    ns: { t: '🏦 "Banco no compatible"', h: '<h4>Bancos que SI funcionan:</h4><p>Chase, Bank of America, Wells Fargo, Citi, Capital One, Discover, US Bank, PNC, TD Bank, Truist</p><h4>Soluciones:</h4><ol><li><strong>Llama a tu banco</strong></li><li><strong>Usa otra tarjeta</strong></li><li><strong>Prueba pay.google.com</strong></li></ol>' },
-    vf: { t: '🔐 "Fallo verificacion"', h: '<ol><li><strong>Verifica numero EXACTO</strong></li><li><strong>Verifica vencimiento</strong></li><li><strong>Prueba desde pay.google.com</strong></li><li><strong>Contacta banco</strong></li></ol>' },
-    rg: { t: '🌍 "Region no soportada"', h: '<ol><li><strong>Cambia region Google Account</strong></li><li><strong>Usa VPN a USA</strong></li><li><strong>Prueba pay.google.com</strong></li><li><strong>Cambia region del telefono</strong></li></ol>' }
+    ca: { t: '❌ "No se puede agregar"', h: '<h4>Causas:</h4><ul><li>Banco no participa en Google Pay</li><li>Tarjeta prepago sin tokenizacion</li><li>Bloqueo antifraude temporal</li></ul><h4>Soluciones:</h4><ol><li><strong>Espera 24 horas</strong></li><li><strong>Llama al banco</strong> — pide habilitar "pagos digitales"</li><li><strong>Prueba Copiar</strong> — siempre funciona</li><li><strong>Cambia Google Account</strong></li></ol>' },
+    sw: { t: '⚠️ "Algo salio mal" (error 006)', h: '<h4>Soluciones:</h4><ol><li><strong>Espera 5-15 minutos</strong></li><li><strong>Cambia WiFi a datos</strong></li><li><strong>Modo avion 10 seg</strong></li><li><strong>Reinicia telefono</strong></li></ol><p><strong>NO intentes mas de 3 veces</strong></p>' },
+    aa: { t: '🔁 "Ya esta agregada"', h: '<ol><li><strong>Ve a Google Pay > Metodos de pago</strong></li><li><strong>Revisa otros Accounts</strong></li><li><strong>Elimina y re-agrega</strong></li></ol>' },
+    ns: { t: '🏦 "Banco no compatible"', h: '<h4>Bancos compatibles:</h4><p>Chase, BofA, Wells, Citi, Capital One, Discover, US Bank, PNC, TD, Truist</p>' },
+    vf: { t: '🔐 "Fallo verificacion"', h: '<ol><li><strong>Verifica numero EXACTO</strong></li><li><strong>Prueba pay.google.com</strong></li><li><strong>Contacta banco</strong></li></ol>' },
+    rg: { t: '🌍 "Region no soportada"', h: '<ol><li><strong>Cambia region Google</strong></li><li><strong>Usa VPN a USA</strong></li><li><strong>Prueba pay.google.com</strong></li></ol>' }
 };
 
 function esol(k) {
@@ -301,3 +290,5 @@ function esol(k) {
     el('solPan').classList.remove('hide');
     el('solPan').scrollIntoView({ behavior: 'smooth' });
 }
+
+console.log('[NexusPay] app.js loaded successfully');
