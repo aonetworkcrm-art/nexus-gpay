@@ -102,8 +102,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0e1a;
     <div class="mcard">
       <h3>⚡ Vincular a Google Pay</h3>
       <p>Abre Google Pay para agregar tu tarjeta directamente</p>
-      <a class="btn bp" id="btnVincular" href="https://pay.google.com/gp/m/card/add" target="_blank" onclick="return validarYIr(this)">⚡ Vincular Ahora</a>
-      <div class="msmall">Abre pay.google.com en nueva pestana</div>
+      <a class="btn bp" id="btnVincular" href="https://pay.google.com" target="_blank" onclick="return validarYIr(this)">⚡ Vincular Ahora</a>
+      <div class="msmall">Abre Google Pay en nueva pestana</div>
     </div>
 
     <div class="mcard">
@@ -119,7 +119,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0e1a;
       <h3>🌐 Google Pay Web</h3>
       <p>Otras formas de abrir Google Pay</p>
       <div class="mrow">
-        <a class="btn bo" href="https://pay.google.com/gp/m/card/add" target="_blank">🌐 pay.google.com</a>
+        <a class="btn bo" href="https://pay.google.com" target="_blank">🌐 Google Pay</a>
         <a class="btn bo" href="https://wallet.google.com/manage/methods" target="_blank">📱 Wallet</a>
       </div>
     </div>
@@ -197,6 +197,8 @@ function validarYIr(link) {
   if (!num || num.length < 13) { msg('Numero invalido', 'err'); return false; }
   if (!exp || exp.length < 5) { msg('Vencimiento requerido', 'err'); return false; }
   msg('Abriendo Google Pay...', 'inf');
+  // Copy data to clipboard before opening
+  doCopy(num + '\n' + exp);
   return true; // allow default <a> navigation
 }
 
