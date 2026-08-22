@@ -4,118 +4,252 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>NexusPay — Vincular Tarjeta a Google Pay</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-<link rel="stylesheet" href="style.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;display:flex;justify-content:center}
+#app{max-width:480px;width:100%;padding:16px}
+.hd{background:#111827;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:18px;font-weight:700;color:#4285f4}
+.badge{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid #1e293b;color:#94a3b8}
+.sbar{padding:10px 16px;border-radius:8px;margin-bottom:12px;font-size:13px;display:none}
+.sbar.show{display:block}
+.sbar.ok{background:rgba(52,211,153,.1);color:#34d399}
+.sbar.err{background:rgba(248,113,113,.1);color:#f87171}
+.sbar.inf{background:rgba(66,133,244,.1);color:#4285f4}
+.card{background:linear-gradient(135deg,#1a2744,#1e1b4b);border-radius:16px;padding:24px;margin-bottom:16px;border:1px solid rgba(66,133,244,.2)}
+.chip{width:40px;height:28px;background:linear-gradient(135deg,#d4af37,#f0d060);border-radius:6px;margin-bottom:16px}
+.brand{font-size:16px;font-weight:700;letter-spacing:2px;color:#4285f4;margin-bottom:16px}
+.cnum{font-size:22px;font-weight:600;letter-spacing:3px;font-family:'Courier New',monospace;margin-bottom:16px}
+.cexp{text-align:right;font-size:14px;color:#94a3b8}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:5px}
+.fg input{width:100%;background:#1a2035;border:1px solid #1e293b;border-radius:8px;padding:14px 16px;font-size:18px;color:#e2e8f0;outline:none;font-family:monospace;letter-spacing:1px}
+.fg input:focus{border-color:#4285f4;box-shadow:0 0 0 3px rgba(66,133,244,.2)}
+.mcard{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:16px;margin-bottom:10px}
+.mcard h3{font-size:15px;margin-bottom:4px}
+.mcard p{font-size:12px;color:#94a3b8;margin-bottom:12px}
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+.bp{background:linear-gradient(135deg,#4285f4,#6366f1);color:#fff;box-shadow:0 4px 15px rgba(66,133,244,.3)}
+.bp:active{transform:scale(.97);box-shadow:0 2px 8px rgba(66,133,244,.4)}
+.bs{background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);font-size:14px;padding:12px;margin-bottom:6px}
+.bo{background:transparent;color:#94a3b8;border:1px solid #1e293b;font-size:14px;padding:12px;margin-bottom:6px}
+.mrow{display:flex;gap:8px}
+.mrow .btn{flex:1}
+.msmall{font-size:10px;color:#64748b;margin-top:8px}
+.ft{text-align:center;padding:16px;font-size:10px;color:#64748b}
+/* Error tab */
+.egrid{display:flex;flex-direction:column;gap:8px}
+.ecard{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:12px;cursor:pointer}
+.ecard:active{border-color:#4285f4}
+.ecode{font-size:10px;font-weight:700;color:#fbbf24;margin-bottom:4px}
+.ecard h3{font-size:13px;margin-bottom:2px}
+.ecard p{font-size:11px;color:#94a3b8;font-style:italic}
+.etap{font-size:11px;color:#4285f4;font-weight:600}
+.solpan{background:#111827;border:1px solid #4285f4;border-radius:12px;padding:14px;margin-top:14px;display:none}
+.solpan.show{display:block}
+.solhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.solc{font-size:12px;line-height:1.7;color:#94a3b8}
+.solc h4{color:#e2e8f0;margin:10px 0 4px;font-size:13px}
+.solc ul,.solc ol{padding-left:18px;margin:4px 0}
+.solc li{margin-bottom:3px}
+.solc strong{color:#e2e8f0}
+.stitle{font-size:17px;font-weight:700;margin-bottom:4px}
+.sdesc{font-size:12px;color:#94a3b8;margin-bottom:14px}
+.hs{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:12px;margin-bottom:8px}
+.hs h3{font-size:13px;margin-bottom:6px;color:#4285f4}
+.hs p,.hs li{font-size:12px;line-height:1.6;color:#94a3b8}
+.hs ol{padding-left:16px}
+/* Tabs */
+.tabs{display:flex;background:#111827;border-radius:12px;padding:4px;margin-bottom:16px;gap:4px}
+.tab{flex:1;padding:10px;background:none;border:none;color:#64748b;font-size:11px;font-weight:600;border-radius:8px;cursor:pointer}
+.tab.on{background:rgba(66,133,244,.15);color:#4285f4}
+.pan{display:none}.pan.on{display:block}
+</style>
 </head>
 <body>
 <div id="app">
-  <header class="hd">
-    <div class="hd-row">
-      <div class="logo">⚡ NexusPay</div>
-      <div class="badge" id="gpayBadge">🔍 Detectando...</div>
+  <div class="hd">
+    <div class="logo">⚡ NexusPay</div>
+    <div class="badge">Google Pay Linker</div>
+  </div>
+
+  <div id="sbar" class="sbar"></div>
+
+  <div class="tabs">
+    <button class="tab on" onclick="showTab('add')">💳 Vincular</button>
+    <button class="tab" onclick="showTab('err')">🔧 Errores</button>
+    <button class="tab" onclick="showTab('faq')">📖 Ayuda</button>
+  </div>
+
+  <!-- VINCULAR -->
+  <div id="p-add" class="pan on">
+    <div class="card">
+      <div class="chip"></div>
+      <div class="brand" id="brand">VISA</div>
+      <div class="cnum" id="cnum">•••• •••• •••• ••••</div>
+      <div class="cexp" id="cexp">MM/AA</div>
     </div>
-  </header>
 
-  <div id="sbar" class="sbar hide"><span id="sicon"></span><span id="stxt"></span></div>
-
-  <main>
-    <div class="tabs">
-      <button class="tab on" data-t="add">💳 Vincular</button>
-      <button class="tab" data-t="err">🔧 Errores</button>
-      <button class="tab" data-t="faq">📖 Ayuda</button>
+    <div class="fg">
+      <label>Numero de Tarjeta</label>
+      <input type="tel" id="inum" placeholder="1234 5678 9012 3456" maxlength="19" inputmode="numeric" autocomplete="cc-number">
+    </div>
+    <div class="fg">
+      <label>Vencimiento</label>
+      <input type="tel" id="iexp" placeholder="MM/AA" maxlength="5" inputmode="numeric" autocomplete="cc-exp">
     </div>
 
-    <!-- VINCULAR -->
-    <div id="t-add" class="pan on">
-      <div class="cprev">
-        <div class="cchip"></div>
-        <div class="cbrand" id="cbrand">VISA</div>
-        <div class="cnum" id="cnum">•••• •••• •••• ••••</div>
-        <div class="cfoot"><span id="cexp">MM/AA</span></div>
-      </div>
+    <div class="mcard">
+      <h3>⚡ Vincular a Google Pay</h3>
+      <p>Abre Google Pay para agregar tu tarjeta directamente</p>
+      <a class="btn bp" id="btnVincular" href="https://pay.google.com/gp/m/card/add" target="_blank" onclick="return validarYIr(this)">⚡ Vincular Ahora</a>
+      <div class="msmall">Abre pay.google.com en nueva pestana</div>
+    </div>
 
-      <form id="cform" autocomplete="off">
-        <div class="fg">
-          <label>Numero de Tarjeta</label>
-          <input type="tel" id="inum" placeholder="1234 5678 9012 3456" maxlength="19" inputmode="numeric" autocomplete="cc-number">
-        </div>
-        <div class="fg">
-          <label>Vencimiento</label>
-          <input type="tel" id="iexp" placeholder="MM/AA" maxlength="5" inputmode="numeric" autocomplete="cc-exp">
-        </div>
-      </form>
-
-      <!-- Google Pay Button Area -->
-      <div class="mcard m1">
-        <h3>⚡ Vincular con Google Pay</h3>
-        <p>Abre Google Pay para agregar tu tarjeta</p>
-        <!-- This is where the native GPay button appears if available -->
-        <div id="gpayBtnContainer"></div>
-        <!-- ALWAYS VISIBLE fallback button - opens pay.google.com -->
-        <button class="btn bp big" id="btnVincular" onclick="vincular()">⚡ Vincular Ahora</button>
-        <small id="gpayNote">Abre Google Pay para vincular tu tarjeta</small>
-      </div>
-
-      <!-- METHOD 2: Copy -->
-      <div class="mcard">
-        <h3>📋 Copiar Datos</h3>
-        <p>Copia y pega en Google Pay manualmente</p>
-        <div class="mrow">
-          <button class="btn bs" onclick="m2a()">📋 Copiar Todo</button>
-          <button class="btn bs" onclick="m2b()">📝 Solo Numeros</button>
-        </div>
-      </div>
-
-      <!-- METHOD 3: Web -->
-      <div class="mcard">
-        <h3>🌐 Google Pay Web</h3>
-        <p>Abre pay.google.com para agregar tarjeta</p>
-        <div class="mrow">
-          <button class="btn bo" onclick="m4a()">🌐 pay.google.com</button>
-          <button class="btn bo" onclick="m4b()">📱 Google Wallet</button>
-        </div>
+    <div class="mcard">
+      <h3>📋 Copiar Datos</h3>
+      <p>Copia y pega en Google Pay manualmente</p>
+      <div class="mrow">
+        <button class="btn bs" onclick="copiarTodo()">📋 Copiar Todo</button>
+        <button class="btn bs" onclick="copiarSolo()">📝 Solo Numeros</button>
       </div>
     </div>
 
-    <!-- ERRORES -->
-    <div id="t-err" class="pan">
-      <h2 class="stitle">🔧 Errores Google Pay</h2>
-      <p class="sdesc">Toca el error para ver la solucion</p>
-      <div class="egrid">
-        <div class="ecard" onclick="esol('ca')"><div class="ecode">❌ Comun</div><h3>"No se puede agregar"</h3><p>This card can't be added</p><span class="etap">Soluciones →</span></div>
-        <div class="ecard" onclick="esol('sw')"><div class="ecode">⚠️ Temporal</div><h3>"Algo salio mal"</h3><p>Something went wrong</p><span class="etap">Soluciones →</span></div>
-        <div class="ecard" onclick="esol('aa')"><div class="ecode">🔁 Duplicado</div><h3>"Ya esta agregada"</h3><p>Card already added</p><span class="etap">Soluciones →</span></div>
-        <div class="ecard" onclick="esol('ns')"><div class="ecode">🏦 Emisor</div><h3>"Banco no compatible"</h3><p>Issuer doesn't support</p><span class="etap">Soluciones →</span></div>
-        <div class="ecard" onclick="esol('vf')"><div class="ecode">🔐 Verificacion</div><h3>"Fallo verificacion"</h3><p>Couldn't verify card</p><span class="etap">Soluciones →</span></div>
-        <div class="ecard" onclick="esol('rg')"><div class="ecode">🌍 Region</div><h3>"Region no soportada"</h3><p>Not available in region</p><span class="etap">Soluciones →</span></div>
-      </div>
-      <div id="solPan" class="solpan hide">
-        <div class="solhd"><h3 id="solT"></h3><button class="bclose" onclick="el('solPan').classList.add('hide')">✕</button></div>
-        <div id="solC" class="solc"></div>
+    <div class="mcard">
+      <h3>🌐 Google Pay Web</h3>
+      <p>Otras formas de abrir Google Pay</p>
+      <div class="mrow">
+        <a class="btn bo" href="https://pay.google.com/gp/m/card/add" target="_blank">🌐 pay.google.com</a>
+        <a class="btn bo" href="https://wallet.google.com/manage/methods" target="_blank">📱 Wallet</a>
       </div>
     </div>
+  </div>
 
-    <!-- AYUDA -->
-    <div id="t-faq" class="pan">
-      <h2>📖 Ayuda</h2>
-      <div class="hs"><h3>🎯 Que es?</h3><p>Herramienta para <strong>vincular tarjetas a Google Pay</strong> cuando la app falla.</p></div>
-      <div class="hs"><h3>🔗 Como funciona?</h3>
-        <ol><li>Ingresa numero y vencimiento</li><li>Presiona "Vincular Ahora"</li><li>Se abre Google Pay con tu tarjeta</li><li>Confirma y listo</li></ol>
-      </div>
-      <div class="hs"><h3>🔧 Si falla</h3>
-        <ol><li>Ve a "Errores"</li><li>Busca tu error</li><li>Sigue la solucion</li></ol>
-      </div>
-      <div class="hs"><h3>⚡ Tips</h3>
-        <ol><li>Usa <strong>Chrome</strong> en Android</li><li>Ten <strong>Google sesion</strong> activa</li><li>Actualiza <strong>Google Pay</strong></li></ol>
-      </div>
+  <!-- ERRORES -->
+  <div id="p-err" class="pan">
+    <h2 class="stitle">🔧 Errores Google Pay</h2>
+    <p class="sdesc">Toca el error para ver la solucion</p>
+    <div class="egrid">
+      <div class="ecard" onclick="esol('ca')"><div class="ecode">❌</div><h3>"No se puede agregar"</h3><span class="etap">Soluciones →</span></div>
+      <div class="ecard" onclick="esol('sw')"><div class="ecode">⚠️</div><h3>"Algo salio mal"</h3><span class="etap">Soluciones →</span></div>
+      <div class="ecard" onclick="esol('aa')"><div class="ecode">🔁</div><h3>"Ya esta agregada"</h3><span class="etap">Soluciones →</span></div>
+      <div class="ecard" onclick="esol('ns')"><div class="ecode">🏦</div><h3>"Banco no compatible"</h3><span class="etap">Soluciones →</span></div>
+      <div class="ecard" onclick="esol('vf')"><div class="ecode">🔐</div><h3>"Fallo verificacion"</h3><span class="etap">Soluciones →</span></div>
+      <div class="ecard" onclick="esol('rg')"><div class="ecode">🌍</div><h3>"Region no soportada"</h3><span class="etap">Soluciones →</span></div>
     </div>
-  </main>
+    <div id="solPan" class="solpan">
+      <div class="solhd"><h3 id="solT"></h3><button onclick="document.getElementById('solPan').classList.remove('show')" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer">✕</button></div>
+      <div id="solC" class="solc"></div>
+    </div>
+  </div>
 
-  <footer class="ft"><p>NexusPay — 100% local, sin servidores</p></footer>
+  <!-- AYUDA -->
+  <div id="p-faq" class="pan">
+    <h2 style="font-size:18px;margin-bottom:12px">📖 Ayuda</h2>
+    <div class="hs"><h3>🎯 Que es?</h3><p>Herramienta para <strong>vincular tarjetas a Google Pay</strong> cuando la app falla.</p></div>
+    <div class="hs"><h3>🔗 Como usar</h3><ol><li>Ingresa numero y vencimiento</li><li>Presiona "Vincular Ahora"</li><li>Se abre Google Pay</li><li>Confirma y listo</li></ol></div>
+    <div class="hs"><h3>⚡ Tips</h3><ol><li>Usa <strong>Chrome</strong> en Android</li><li>Ten <strong>Google sesion</strong> activa</li><li>Actualiza <strong>Google Pay</strong></li></ol></div>
+  </div>
+
+  <div class="ft">NexusPay — 100% local, sin servidores</div>
 </div>
 
-<!-- Google Pay API (loads async, non-blocking) -->
-<script async src="https://pay.google.com/gp/p/js/pay.js" onload="onGooglePayLoad()" onerror="onGooglePayError()"></script>
-<script src="app.js"></script>
+<script>
+// ==================== TABS ====================
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});
+  document.querySelectorAll('.pan').forEach(function(p){p.classList.remove('on')});
+  document.getElementById('p-'+t).classList.add('on');
+  document.querySelectorAll('.tab')[['add','err','faq'].indexOf(t)].classList.add('on');
+  document.getElementById('solPan').classList.remove('show');
+}
+
+// ==================== STATUS MSG ====================
+function msg(t, c) {
+  var b = document.getElementById('sbar');
+  b.textContent = (c==='ok'?'✓ ':c==='err'?'✕ ':'ℹ ') + t;
+  b.className = 'sbar show ' + c;
+  setTimeout(function(){b.classList.remove('show')}, 3000);
+}
+
+// ==================== AUTO FORMAT ====================
+document.getElementById('inum').addEventListener('input', function() {
+  var raw = this.value.replace(/\s/g,'').replace(/\D/g,'').substring(0,16);
+  var f = '';
+  for(var i=0;i<raw.length;i++){if(i>0&&i%4===0)f+=' ';f+=raw[i];}
+  this.value = f;
+  document.getElementById('cnum').textContent = f || '\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022';
+  var b = 'VISA';
+  if(/^4/.test(raw))b='VISA';else if(/^5[1-5]/.test(raw))b='MASTERCARD';else if(/^3[47]/.test(raw))b='AMEX';else if(/^6(?:011|5)/.test(raw))b='DISCOVER';
+  document.getElementById('brand').textContent = b;
+});
+
+document.getElementById('iexp').addEventListener('input', function() {
+  var raw = this.value.replace(/\//g,'').replace(/\D/g,'').substring(0,4);
+  this.value = raw.length > 2 ? raw.substring(0,2)+'/'+raw.substring(2) : raw;
+  document.getElementById('cexp').textContent = this.value || 'MM/AA';
+});
+
+// ==================== VALIDATE & NAVIGATE ====================
+function validarYIr(link) {
+  var num = document.getElementById('inum').value.replace(/\s/g,'');
+  var exp = document.getElementById('iexp').value;
+  if (!num || num.length < 13) { msg('Numero invalido', 'err'); return false; }
+  if (!exp || exp.length < 5) { msg('Vencimiento requerido', 'err'); return false; }
+  msg('Abriendo Google Pay...', 'inf');
+  return true; // allow default <a> navigation
+}
+
+// ==================== COPY ====================
+function copiarTodo() {
+  var num = document.getElementById('inum').value.replace(/\s/g,'');
+  var exp = document.getElementById('iexp').value;
+  var b = document.getElementById('brand').textContent;
+  if (!num || num.length < 13) { msg('Numero invalido', 'err'); return; }
+  if (!exp || exp.length < 5) { msg('Vencimiento requerido', 'err'); return; }
+  var t = 'TARJETA GOOGLE PAY\nNumero: '+num+'\nVence: '+exp+'\nRed: '+b+'\n\nGoogle Pay > + > Tarjeta';
+  doCopy(t);
+  msg('Datos copiados', 'ok');
+}
+
+function copiarSolo() {
+  var num = document.getElementById('inum').value.replace(/\s/g,'');
+  var exp = document.getElementById('iexp').value;
+  if (!num || num.length < 13) { msg('Numero invalido', 'err'); return; }
+  if (!exp || exp.length < 5) { msg('Vencimiento requerido', 'err'); return; }
+  doCopy(num+'\n'+exp);
+  msg('Copiado', 'ok');
+}
+
+function doCopy(t) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t);
+  } else {
+    var a = document.createElement('textarea');
+    a.value = t;
+    a.style.cssText = 'position:fixed;left:0;top:0;opacity:0';
+    document.body.appendChild(a);
+    a.select();
+    document.execCommand('copy');
+    document.body.removeChild(a);
+  }
+}
+
+// ==================== ERROR SOLUTIONS ====================
+var S = {
+  ca: {t:'❌ "No se puede agregar"', h:'<h4>Soluciones:</h4><ol><li><strong>Espera 24 horas</strong></li><li><strong>Llama al banco</strong> — habilitar pagos digitales</li><li><strong>Prueba Copiar</strong></li><li><strong>Cambia Google Account</strong></li></ol>'},
+  sw: {t:'⚠️ "Algo salio mal"', h:'<ol><li><strong>Espera 5-15 min</strong></li><li><strong>Cambia WiFi a datos</strong></li><li><strong>Modo avion 10 seg</strong></li><li><strong>Reinicia telefono</strong></li></ol>'},
+  aa: {t:'🔁 "Ya esta agregada"', h:'<ol><li><strong>Google Pay > Metodos de pago</strong></li><li><strong>Revisa otros Accounts</strong></li><li><strong>Elimina y re-agrega</strong></li></ol>'},
+  ns: {t:'🏦 "Banco no compatible"', h:'<p>Chase, BofA, Wells, Citi, Capital One, Discover, US Bank, PNC, TD, Truist</p>'},
+  vf: {t:'🔐 "Fallo verificacion"', h:'<ol><li><strong>Verifica datos EXACTOS</strong></li><li><strong>Prueba pay.google.com</strong></li><li><strong>Contacta banco</strong></li></ol>'},
+  rg: {t:'🌍 "Region no soportada"', h:'<ol><li><strong>Cambia region Google</strong></li><li><strong>VPN a USA</strong></li><li><strong>pay.google.com</strong></li></ol>'}
+};
+function esol(k) {
+  var s = S[k]; if(!s)return;
+  document.getElementById('solT').textContent = s.t;
+  document.getElementById('solC').innerHTML = s.h;
+  document.getElementById('solPan').classList.add('show');
+}
+</script>
 </body>
 </html>
