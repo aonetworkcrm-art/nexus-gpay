@@ -1,17 +1,12 @@
 @echo off
-title ⚡ NexusPay
+title ⚡ NexusPay v6
 color 0B
 echo.
 echo  ╔══════════════════════════════════════╗
-echo  ║   ⚡ NexusPay — Ejecutando           ║
+echo  ║   ⚡ NexusPay v6                     ║
+echo  ║   Puerto: 5051                       ║
 echo  ╚══════════════════════════════════════╝
 echo.
-echo  Abre en tu navegador: http://localhost:5050
-echo.
-echo  Primera vez: inicia sesion en Google (se guarda)
-echo  Siguientes veces: ya esta logueado
-echo.
-echo  Presiona Ctrl+C para detener
-echo  ─────────────────────────────────────
+echo  Abre: http://localhost:5051
 echo.
 python server.py
